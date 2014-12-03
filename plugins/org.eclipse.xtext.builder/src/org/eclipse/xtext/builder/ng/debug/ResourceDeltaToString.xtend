@@ -9,9 +9,9 @@ package org.eclipse.xtext.builder.ng.debug
 
 import org.eclipse.core.resources.IResourceDelta
 import org.eclipse.core.runtime.IPath
+import org.eclipse.core.runtime.Path
 
 import static org.eclipse.core.resources.IResourceDelta.*
-import org.eclipse.core.runtime.Path
 
 /**
  * @author Moritz Eysholdt - Initial contribution and API
@@ -19,14 +19,32 @@ import org.eclipse.core.runtime.Path
 class ResourceDeltaToString implements (IResourceDelta)=>String {
 
 	private def String getKindString(IResourceDelta delta) {
-		switch kind: delta.kind {
-			case ADDED: "ADDED"
-			case REMOVED: "REMOVED"
-			case CHANGED: "CHANGED"
-			case ADDED_PHANTOM: "ADDED_PHANTOM"
-			case REMOVED_PHANTOM: "REMOVED_PHANTOM"
-			default: kind.toString
-		}
+		val kind = delta.kind
+		val flags = delta.flags
+		val result = <String>newArrayList()
+		if(kind ** ADDED) result += "ADDED"
+		if(kind ** REMOVED) result += "REMOVED"
+		if(kind ** CHANGED) result += "CHANGED"
+		if(kind ** ADDED_PHANTOM) result += "ADDED_PHANTOM"
+		if(kind ** REMOVED_PHANTOM) result += "REMOVED_PHANTOM"
+		if(flags ** CONTENT) result += "CONTENT"
+		if(flags ** DERIVED_CHANGED) result += "DERIVED_CHANGED"
+		if(flags ** DESCRIPTION) result += "DESCRIPTION"
+		if(flags ** ENCODING) result += "ENCODING"
+		if(flags ** LOCAL_CHANGED) result += "LOCAL_CHANGED"
+		if(flags ** OPEN) result += "OPEN"
+		if(flags ** MOVED_TO) result += "MOVED_TO"
+		if(flags ** MOVED_FROM) result += "MOVED_FROM"
+		if(flags ** COPIED_FROM) result += "COPIED_FROM"
+		if(flags ** TYPE) result += "TYPE"
+		if(flags ** SYNC) result += "SYNC"
+		if(flags ** MARKERS) result += "MARKERS"
+		if(flags ** REPLACED) result += "REPLACED"
+		return result.join("|")
+	}
+
+	def boolean **(int bits, int bit) {
+		bits.bitwiseAnd(bit) != 0
 	}
 
 	override apply(IResourceDelta delta) {
