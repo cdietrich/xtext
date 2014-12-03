@@ -14,8 +14,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import java.util.Map;
 import java.util.Set;
-import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -149,7 +149,7 @@ public class XtextCompiler {
   private RegistryBuilderParticipant participant;
   
   @Inject
-  private Workspace workspace;
+  private IWorkspace workspace;
   
   public ImmutableList<IResourceDescription.Delta> compile(final CompilationRequest request) {
     try {

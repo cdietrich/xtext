@@ -40,7 +40,6 @@ class CompilerJob extends Job {
 			if(currentRequest.project.dependsOn(newRequests.head.project)) 
 				cancel
 		}
-		join
 		if(!pendingRequests.empty) {
 			val project2request = newRequests.toMap[project]
 			for(pending: pendingRequests) {
@@ -52,7 +51,8 @@ class CompilerJob extends Job {
 		synchronized(requests) {
 			requests.addAll(newRequests)
 		}
-		schedule		
+		if(state != RUNNING)
+			schedule		
 	}
 	
 	private def drainRequests() {

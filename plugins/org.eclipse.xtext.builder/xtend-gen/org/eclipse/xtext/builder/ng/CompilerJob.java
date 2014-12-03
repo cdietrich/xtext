@@ -45,66 +45,65 @@ public class CompilerJob extends Job {
   }
   
   public synchronized void setCompilationRequests(final List<CompilationRequest> newRequests) {
-    try {
-      boolean _or = false;
-      boolean _isEmpty = newRequests.isEmpty();
-      if (_isEmpty) {
-        _or = true;
-      } else {
-        final Function1<CompilationRequest, Boolean> _function = new Function1<CompilationRequest, Boolean>() {
-          public Boolean apply(final CompilationRequest it) {
-            return Boolean.valueOf(it.shouldCompile());
-          }
-        };
-        boolean _exists = IterableExtensions.<CompilationRequest>exists(newRequests, _function);
-        boolean _not = (!_exists);
-        _or = _not;
+    boolean _or = false;
+    boolean _isEmpty = newRequests.isEmpty();
+    if (_isEmpty) {
+      _or = true;
+    } else {
+      final Function1<CompilationRequest, Boolean> _function = new Function1<CompilationRequest, Boolean>() {
+        public Boolean apply(final CompilationRequest it) {
+          return Boolean.valueOf(it.shouldCompile());
+        }
+      };
+      boolean _exists = IterableExtensions.<CompilationRequest>exists(newRequests, _function);
+      boolean _not = (!_exists);
+      _or = _not;
+    }
+    if (_or) {
+      return;
+    }
+    final ArrayList<CompilationRequest> pendingRequests = this.drainRequests();
+    final CompilationRequest currentRequest = IterableExtensions.<CompilationRequest>head(pendingRequests);
+    boolean _notEquals = (!Objects.equal(currentRequest, null));
+    if (_notEquals) {
+      IProject _project = currentRequest.getProject();
+      CompilationRequest _head = IterableExtensions.<CompilationRequest>head(newRequests);
+      IProject _project_1 = _head.getProject();
+      boolean _dependsOn = ProjectUtility.dependsOn(_project, _project_1);
+      if (_dependsOn) {
+        this.cancel();
       }
-      if (_or) {
-        return;
-      }
-      final ArrayList<CompilationRequest> pendingRequests = this.drainRequests();
-      final CompilationRequest currentRequest = IterableExtensions.<CompilationRequest>head(pendingRequests);
-      boolean _notEquals = (!Objects.equal(currentRequest, null));
-      if (_notEquals) {
-        IProject _project = currentRequest.getProject();
-        CompilationRequest _head = IterableExtensions.<CompilationRequest>head(newRequests);
-        IProject _project_1 = _head.getProject();
-        boolean _dependsOn = ProjectUtility.dependsOn(_project, _project_1);
-        if (_dependsOn) {
-          this.cancel();
+    }
+    boolean _isEmpty_1 = pendingRequests.isEmpty();
+    boolean _not_1 = (!_isEmpty_1);
+    if (_not_1) {
+      final Function1<CompilationRequest, IProject> _function_1 = new Function1<CompilationRequest, IProject>() {
+        public IProject apply(final CompilationRequest it) {
+          return it.getProject();
+        }
+      };
+      final Map<IProject, CompilationRequest> project2request = IterableExtensions.<IProject, CompilationRequest>toMap(newRequests, _function_1);
+      for (final CompilationRequest pending : pendingRequests) {
+        {
+          IProject _project_2 = pending.getProject();
+          final CompilationRequest newRequest = project2request.get(_project_2);
+          Set<URI> _toBeDeleted = newRequest.getToBeDeleted();
+          Set<URI> _toBeDeleted_1 = pending.getToBeDeleted();
+          Iterables.<URI>addAll(_toBeDeleted, _toBeDeleted_1);
+          Set<URI> _toBeUpdated = newRequest.getToBeUpdated();
+          Set<URI> _toBeUpdated_1 = pending.getToBeUpdated();
+          Iterables.<URI>addAll(_toBeUpdated, _toBeUpdated_1);
         }
       }
-      this.join();
-      boolean _isEmpty_1 = pendingRequests.isEmpty();
-      boolean _not_1 = (!_isEmpty_1);
-      if (_not_1) {
-        final Function1<CompilationRequest, IProject> _function_1 = new Function1<CompilationRequest, IProject>() {
-          public IProject apply(final CompilationRequest it) {
-            return it.getProject();
-          }
-        };
-        final Map<IProject, CompilationRequest> project2request = IterableExtensions.<IProject, CompilationRequest>toMap(newRequests, _function_1);
-        for (final CompilationRequest pending : pendingRequests) {
-          {
-            IProject _project_2 = pending.getProject();
-            final CompilationRequest newRequest = project2request.get(_project_2);
-            Set<URI> _toBeDeleted = newRequest.getToBeDeleted();
-            Set<URI> _toBeDeleted_1 = pending.getToBeDeleted();
-            Iterables.<URI>addAll(_toBeDeleted, _toBeDeleted_1);
-            Set<URI> _toBeUpdated = newRequest.getToBeUpdated();
-            Set<URI> _toBeUpdated_1 = pending.getToBeUpdated();
-            Iterables.<URI>addAll(_toBeUpdated, _toBeUpdated_1);
-          }
-        }
-      }
-      /* this.requests; */
-      synchronized (this.requests) {
-        this.requests.addAll(newRequests);
-      }
+    }
+    /* this.requests; */
+    synchronized (this.requests) {
+      this.requests.addAll(newRequests);
+    }
+    int _state = this.getState();
+    boolean _notEquals_1 = (_state != Job.RUNNING);
+    if (_notEquals_1) {
       this.schedule();
-    } catch (Throwable _e) {
-      throw Exceptions.sneakyThrow(_e);
     }
   }
   

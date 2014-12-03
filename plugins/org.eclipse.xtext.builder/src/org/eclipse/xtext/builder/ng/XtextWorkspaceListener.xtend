@@ -11,6 +11,7 @@ import com.google.inject.Inject
 import com.google.inject.Singleton
 import org.eclipse.core.resources.IResourceChangeEvent
 import org.eclipse.core.resources.IResourceChangeListener
+import org.eclipse.core.resources.IResourceDelta
 import org.eclipse.core.resources.IStorage
 import org.eclipse.core.resources.IWorkspace
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString
@@ -60,18 +61,27 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 			}
 			val project2request = requests.toMap[project]
 			event.delta.accept [ delta |
-				val resource = delta.resource
-				switch resource {
-					IStorage case delta.kind == REMOVED:
-						project2request.get(resource.project).toBeDeleted += storage2UriMapper.getUri(resource)
-					IStorage case delta.kind == ADDED || delta.kind == CHANGED:
-						project2request.get(resource.project).toBeUpdated += storage2UriMapper.getUri(resource)
+				if(delta.flags != IResourceDelta.MARKERS) {
+					val resource = delta.resource
+					switch resource {
+						IStorage case delta.kind == REMOVED: {
+							val uri = storage2UriMapper.getUri(resource)
+							if(uri != null)
+								project2request.get(resource.project).toBeDeleted += uri
+						}
+						IStorage case delta.kind == ADDED || delta.kind == CHANGED: {
+							val uri = storage2UriMapper.getUri(resource)
+							if(uri != null)
+								project2request.get(resource.project).toBeUpdated += uri
+						}
+					}
+					return true
 				}
-				return true
 			]
 			compilerJob.compilationRequests = requests	
 		} catch (Exception exc) {
 			XtextCompilerConsole.log(exc)
 		}
+		
 	}
 }

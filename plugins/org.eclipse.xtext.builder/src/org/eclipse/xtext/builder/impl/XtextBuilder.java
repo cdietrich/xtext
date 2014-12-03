@@ -68,7 +68,7 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 	@SuppressWarnings("rawtypes")
 	@Override
 	protected IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException {
-		if(kind == INCREMENTAL_BUILD && BuilderSwitch.isUseNewCompiler())  
+		if(BuilderSwitch.isUseNewCompiler())  
 			return getProject().getReferencedProjects();
 
 		if (IBuildFlag.FORGET_BUILD_STATE_ONLY.isSet(args)) {

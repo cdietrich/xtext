@@ -9,8 +9,8 @@ package org.eclipse.xtext.builder.ng
 
 import com.google.common.collect.ImmutableList
 import com.google.inject.Inject
-import org.eclipse.core.internal.resources.Workspace
 import org.eclipse.core.resources.IProject
+import org.eclipse.core.resources.IWorkspace
 import org.eclipse.core.runtime.NullProgressMonitor
 import org.eclipse.emf.ecore.resource.ResourceSet
 import org.eclipse.xtend.lib.annotations.Data
@@ -35,7 +35,7 @@ class XtextCompiler {
 
 	@Inject RegistryBuilderParticipant participant
 
-	@Inject Workspace workspace
+	@Inject IWorkspace workspace
 
 	def compile(CompilationRequest request) {
 		val buildType = BuildType.INCREMENTAL

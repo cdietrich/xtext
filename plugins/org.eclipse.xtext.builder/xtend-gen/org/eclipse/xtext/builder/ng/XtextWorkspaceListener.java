@@ -7,6 +7,7 @@
  */
 package org.eclipse.xtext.builder.ng;
 
+import com.google.common.base.Objects;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
@@ -105,45 +106,56 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
       IResourceDelta _delta = event.getDelta();
       final IResourceDeltaVisitor _function_2 = new IResourceDeltaVisitor() {
         public boolean visit(final IResourceDelta delta) throws CoreException {
-          final IResource resource = delta.getResource();
-          boolean _matched = false;
-          if (!_matched) {
-            if (resource instanceof IStorage) {
-              int _kind = delta.getKind();
-              boolean _equals = (_kind == IResourceDelta.REMOVED);
-              if (_equals) {
-                _matched=true;
-                IProject _project = resource.getProject();
-                CompilationRequest _get = project2request.get(_project);
-                Set<URI> _toBeDeleted = _get.getToBeDeleted();
-                URI _uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
-                _toBeDeleted.add(_uri);
+          int _flags = delta.getFlags();
+          boolean _notEquals = (_flags != IResourceDelta.MARKERS);
+          if (_notEquals) {
+            final IResource resource = delta.getResource();
+            boolean _matched = false;
+            if (!_matched) {
+              if (resource instanceof IStorage) {
+                int _kind = delta.getKind();
+                boolean _equals = (_kind == IResourceDelta.REMOVED);
+                if (_equals) {
+                  _matched=true;
+                  final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
+                  boolean _notEquals_1 = (!Objects.equal(uri, null));
+                  if (_notEquals_1) {
+                    IProject _project = resource.getProject();
+                    CompilationRequest _get = project2request.get(_project);
+                    Set<URI> _toBeDeleted = _get.getToBeDeleted();
+                    _toBeDeleted.add(uri);
+                  }
+                }
               }
             }
-          }
-          if (!_matched) {
-            if (resource instanceof IStorage) {
-              boolean _or = false;
-              int _kind = delta.getKind();
-              boolean _equals = (_kind == IResourceDelta.ADDED);
-              if (_equals) {
-                _or = true;
-              } else {
-                int _kind_1 = delta.getKind();
-                boolean _equals_1 = (_kind_1 == IResourceDelta.CHANGED);
-                _or = _equals_1;
-              }
-              if (_or) {
-                _matched=true;
-                IProject _project = resource.getProject();
-                CompilationRequest _get = project2request.get(_project);
-                Set<URI> _toBeUpdated = _get.getToBeUpdated();
-                URI _uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
-                _toBeUpdated.add(_uri);
+            if (!_matched) {
+              if (resource instanceof IStorage) {
+                boolean _or = false;
+                int _kind = delta.getKind();
+                boolean _equals = (_kind == IResourceDelta.ADDED);
+                if (_equals) {
+                  _or = true;
+                } else {
+                  int _kind_1 = delta.getKind();
+                  boolean _equals_1 = (_kind_1 == IResourceDelta.CHANGED);
+                  _or = _equals_1;
+                }
+                if (_or) {
+                  _matched=true;
+                  final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
+                  boolean _notEquals_1 = (!Objects.equal(uri, null));
+                  if (_notEquals_1) {
+                    IProject _project = resource.getProject();
+                    CompilationRequest _get = project2request.get(_project);
+                    Set<URI> _toBeUpdated = _get.getToBeUpdated();
+                    _toBeUpdated.add(uri);
+                  }
+                }
               }
             }
+            return true;
           }
-          return true;
+          return false;
         }
       };
       _delta.accept(_function_2);
