@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -113,7 +114,7 @@ public class ClusteringBuilderState extends AbstractBuilderState {
         // and a Guice binding, is the index that is used during the build; i.e., linking during the build will
         // use this. Once the build is completed, the persistable index is reset to the contents of newState by
         // virtue of the newMap, which is maintained in synch with this.
-        ResourceSet resourceSet = buildData.getResourceSet();
+        final ResourceSet resourceSet = buildData.getResourceSet();
         final CurrentDescriptions newState = new CurrentDescriptions(resourceSet, newData, buildData);
 
         // Step 3: Create a queue; write new temporary resource descriptions for the added or updated resources so that we can link
@@ -268,8 +269,13 @@ public class ClusteringBuilderState extends AbstractBuilderState {
                         newState.register(newDelta);
                         // Validate now.
                         if (!buildData.isIndexingOnly()) {
+                        	final Delta finalNewDelta = newDelta;
 	                        try {
-	                        	updateMarkers(newDelta, resourceSet, subProgress);
+	                        	workspace.run(new IWorkspaceRunnable() {
+									public void run(IProgressMonitor monitor) throws CoreException {
+										updateMarkers(finalNewDelta, resourceSet, subProgress);
+									}
+								}, monitor);
 	                        } catch (OperationCanceledException e) {
 	                        	loadOperation.cancel();
 	                        	throw e;

@@ -45,13 +45,13 @@ class XtextCompiler {
 		val toBeBuilt = new ToBeBuilt
 		toBeBuilt.toBeDeleted += request.toBeDeleted
 		toBeBuilt.toBeUpdated += request.toBeUpdated
-		val buildData = new BuildData(request.projectName, resourceSet, toBeBuilt, queuedBuildData, indexingOnly)
+		val buildData = new BuildData(request.project.name, resourceSet, toBeBuilt, queuedBuildData, indexingOnly)
 		val progress = new NullProgressMonitor
 		val deltas = builderState.update(buildData, progress)
 		if (participant != null && !indexingOnly) {
 			workspace.run(
 				[
-					participant.build(new BuildContext(workspace.root.getProject(request.projectName), resourceSet, deltas, buildType), progress);
+					participant.build(new BuildContext(request.project, resourceSet, deltas, buildType), progress);
 				], progress)
 		} else {
 			progress.worked(1);

@@ -7,11 +7,10 @@
  */
 package org.eclipse.xtext.builder.ng;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
+import com.google.inject.Singleton;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
@@ -28,27 +27,29 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
-import org.eclipse.xtext.builder.ng.XtextCompiler;
+import org.eclipse.xtext.builder.ng.CompilerJob;
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString;
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
-import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.ui.resource.IResourceSetProvider;
 import org.eclipse.xtext.ui.resource.IStorage2UriMapper;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Exceptions;
+import org.eclipse.xtext.xbase.lib.Functions.Function1;
+import org.eclipse.xtext.xbase.lib.IterableExtensions;
 import org.eclipse.xtext.xbase.lib.ObjectExtensions;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
  */
+@Singleton
 @SuppressWarnings("all")
 public class XtextWorkspaceListener implements IResourceChangeListener {
   @Inject
   private IStorage2UriMapper storage2UriMapper;
   
   @Inject
-  private XtextCompiler compiler;
+  private CompilerJob compilerJob;
   
   @Inject
   private IResourceSetProvider resourceSetProvider;
@@ -75,29 +76,34 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
       ResourceChangeEventToString _resourceChangeEventToString = new ResourceChangeEventToString();
       String _apply = _resourceChangeEventToString.apply(event);
       XtextCompilerConsole.log(_apply);
-      final LinkedHashMap<IProject, CompilationRequest> project2request = new LinkedHashMap<IProject, CompilationRequest>();
+      final ArrayList<CompilationRequest> requests = CollectionLiterals.<CompilationRequest>newArrayList();
       IWorkspaceRoot _root = this.workspace.getRoot();
       IProject[] _projects = _root.getProjects();
       IWorkspace.ProjectOrder _computeProjectOrder = this.workspace.computeProjectOrder(_projects);
       for (final IProject project : _computeProjectOrder.projects) {
         CompilationRequest _compilationRequest = new CompilationRequest();
         final Procedure1<CompilationRequest> _function = new Procedure1<CompilationRequest>() {
-          public void apply(final CompilationRequest it) {
-            String _name = project.getName();
-            it.setProjectName(_name);
-            final IResourceSetProvider _function = new IResourceSetProvider() {
-              public ResourceSet get(final IProject it) {
+          public void apply(final CompilationRequest request) {
+            request.setProject(project);
+            final Provider<ResourceSet> _function = new Provider<ResourceSet>() {
+              public ResourceSet get() {
                 return XtextWorkspaceListener.this.resourceSetProvider.get(project);
               }
             };
-            XtextWorkspaceListener.this.resourceSetProvider = _function;
+            request.setResourceSetProvider(_function);
           }
         };
         CompilationRequest _doubleArrow = ObjectExtensions.<CompilationRequest>operator_doubleArrow(_compilationRequest, _function);
-        project2request.put(project, _doubleArrow);
+        requests.add(_doubleArrow);
       }
+      final Function1<CompilationRequest, IProject> _function_1 = new Function1<CompilationRequest, IProject>() {
+        public IProject apply(final CompilationRequest it) {
+          return it.getProject();
+        }
+      };
+      final Map<IProject, CompilationRequest> project2request = IterableExtensions.<IProject, CompilationRequest>toMap(requests, _function_1);
       IResourceDelta _delta = event.getDelta();
-      final IResourceDeltaVisitor _function_1 = new IResourceDeltaVisitor() {
+      final IResourceDeltaVisitor _function_2 = new IResourceDeltaVisitor() {
         public boolean visit(final IResourceDelta delta) throws CoreException {
           final IResource resource = delta.getResource();
           boolean _matched = false;
@@ -140,20 +146,8 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
           return true;
         }
       };
-      _delta.accept(_function_1);
-      final ArrayList<IResourceDescription.Delta> upstreamChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
-      Set<Map.Entry<IProject, CompilationRequest>> _entrySet = project2request.entrySet();
-      for (final Map.Entry<IProject, CompilationRequest> entry : _entrySet) {
-        {
-          final CompilationRequest compilationRequest = entry.getValue();
-          boolean _shouldCompile = compilationRequest.shouldCompile();
-          if (_shouldCompile) {
-            compilationRequest.addUpstreamChanges(upstreamChanges);
-            ImmutableList<IResourceDescription.Delta> _compile = this.compiler.compile(compilationRequest);
-            Iterables.<IResourceDescription.Delta>addAll(upstreamChanges, _compile);
-          }
-        }
-      }
+      _delta.accept(_function_2);
+      this.compilerJob.setCompilationRequests(requests);
     } catch (final Throwable _t) {
       if (_t instanceof Exception) {
         final Exception exc = (Exception)_t;

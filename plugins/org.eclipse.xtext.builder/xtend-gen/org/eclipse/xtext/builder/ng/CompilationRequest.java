@@ -8,17 +8,14 @@
 package org.eclipse.xtext.builder.ng;
 
 import com.google.inject.Provider;
-import java.util.List;
 import java.util.Set;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtend.lib.annotations.Accessors;
 import org.eclipse.xtend2.lib.StringConcatenation;
-import org.eclipse.xtext.resource.IResourceDescription;
-import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
-import org.eclipse.xtext.xbase.lib.IterableExtensions;
-import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 import org.eclipse.xtext.xbase.lib.Pure;
 
 /**
@@ -31,39 +28,19 @@ public class CompilationRequest {
   
   private final Set<URI> toBeDeleted = CollectionLiterals.<URI>newHashSet();
   
-  private String projectName;
-  
-  private final List<IResourceDescription.Delta> upstreamFileChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
-  
-  private final List<IResourceDescription.Delta> upstreamStructuralFileChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
+  private IProject project;
   
   private boolean computeAffected;
   
   private Provider<ResourceSet> resourceSetProvider;
   
-  private CancelIndicator monitor;
-  
-  public void addUpstreamChange(final IResourceDescription.Delta change) {
-    boolean _haveEObjectDescriptionsChanged = change.haveEObjectDescriptionsChanged();
-    if (_haveEObjectDescriptionsChanged) {
-      this.upstreamStructuralFileChanges.add(change);
-    }
-    this.upstreamFileChanges.add(change);
-  }
-  
-  public void addUpstreamChanges(final Iterable<IResourceDescription.Delta> changes) {
-    final Procedure1<IResourceDescription.Delta> _function = new Procedure1<IResourceDescription.Delta>() {
-      public void apply(final IResourceDescription.Delta it) {
-        CompilationRequest.this.addUpstreamChange(it);
-      }
-    };
-    IterableExtensions.<IResourceDescription.Delta>forEach(changes, _function);
-  }
+  private IProgressMonitor monitor;
   
   public String toString() {
     StringConcatenation _builder = new StringConcatenation();
     _builder.append("CompilationRequest: ");
-    _builder.append(this.projectName, "");
+    String _name = this.project.getName();
+    _builder.append(_name, "");
     _builder.append(":");
     _builder.newLineIfNotEmpty();
     _builder.append("  ");
@@ -102,43 +79,25 @@ public class CompilationRequest {
       }
     }
     _builder.newLineIfNotEmpty();
-    _builder.append("  ");
-    int _size = this.upstreamFileChanges.size();
-    _builder.append(_size, "  ");
-    _builder.append(" upstreamFileChanges ");
-    _builder.newLineIfNotEmpty();
-    _builder.append("  ");
-    int _size_1 = this.upstreamStructuralFileChanges.size();
-    _builder.append(_size_1, "  ");
-    _builder.append(" upstreamStructuralFileChanges ");
-    _builder.newLineIfNotEmpty();
     return _builder.toString();
   }
   
   public boolean shouldCompile() {
     boolean _or = false;
     boolean _or_1 = false;
-    boolean _or_2 = false;
     if (this.computeAffected) {
-      _or_2 = true;
+      _or_1 = true;
     } else {
       boolean _isEmpty = this.toBeDeleted.isEmpty();
       boolean _not = (!_isEmpty);
-      _or_2 = _not;
-    }
-    if (_or_2) {
-      _or_1 = true;
-    } else {
-      boolean _isEmpty_1 = this.toBeUpdated.isEmpty();
-      boolean _not_1 = (!_isEmpty_1);
-      _or_1 = _not_1;
+      _or_1 = _not;
     }
     if (_or_1) {
       _or = true;
     } else {
-      boolean _isEmpty_2 = this.upstreamFileChanges.isEmpty();
-      boolean _not_2 = (!_isEmpty_2);
-      _or = _not_2;
+      boolean _isEmpty_1 = this.toBeUpdated.isEmpty();
+      boolean _not_1 = (!_isEmpty_1);
+      _or = _not_1;
     }
     return _or;
   }
@@ -154,22 +113,12 @@ public class CompilationRequest {
   }
   
   @Pure
-  public String getProjectName() {
-    return this.projectName;
+  public IProject getProject() {
+    return this.project;
   }
   
-  public void setProjectName(final String projectName) {
-    this.projectName = projectName;
-  }
-  
-  @Pure
-  public List<IResourceDescription.Delta> getUpstreamFileChanges() {
-    return this.upstreamFileChanges;
-  }
-  
-  @Pure
-  public List<IResourceDescription.Delta> getUpstreamStructuralFileChanges() {
-    return this.upstreamStructuralFileChanges;
+  public void setProject(final IProject project) {
+    this.project = project;
   }
   
   @Pure
@@ -191,11 +140,11 @@ public class CompilationRequest {
   }
   
   @Pure
-  public CancelIndicator getMonitor() {
+  public IProgressMonitor getMonitor() {
     return this.monitor;
   }
   
-  public void setMonitor(final CancelIndicator monitor) {
+  public void setMonitor(final IProgressMonitor monitor) {
     this.monitor = monitor;
   }
 }

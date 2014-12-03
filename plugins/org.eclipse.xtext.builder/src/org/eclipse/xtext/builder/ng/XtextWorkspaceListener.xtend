@@ -8,15 +8,13 @@
 package org.eclipse.xtext.builder.ng
 
 import com.google.inject.Inject
-import java.util.LinkedHashMap
-import org.eclipse.core.resources.IProject
+import com.google.inject.Singleton
 import org.eclipse.core.resources.IResourceChangeEvent
 import org.eclipse.core.resources.IResourceChangeListener
 import org.eclipse.core.resources.IStorage
 import org.eclipse.core.resources.IWorkspace
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
-import org.eclipse.xtext.resource.IResourceDescription
 import org.eclipse.xtext.ui.resource.IResourceSetProvider
 import org.eclipse.xtext.ui.resource.IStorage2UriMapper
 
@@ -25,11 +23,12 @@ import static org.eclipse.core.resources.IResourceDelta.*
 /**
  * @author Jan Koehnlein - Initial contribution and API
  */
+@Singleton
 class XtextWorkspaceListener implements IResourceChangeListener {
 
 	@Inject IStorage2UriMapper storage2UriMapper
 
-	@Inject XtextCompiler compiler
+	@Inject CompilerJob compilerJob
 
 	@Inject IResourceSetProvider resourceSetProvider
 
@@ -50,15 +49,16 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 			return;
 		try {
 			XtextCompilerConsole.log(new ResourceChangeEventToString().apply(event))
-			val project2request = new LinkedHashMap<IProject, CompilationRequest>
+			val requests = <CompilationRequest>newArrayList
 			for (project : workspace.computeProjectOrder(workspace.root.projects).projects) {
-				project2request.put(project, new CompilationRequest => [
-					projectName = project.name
-					resourceSetProvider = [
+				requests.add(new CompilationRequest => [ request |
+					request.project = project
+					request.resourceSetProvider = [
 						resourceSetProvider.get(project)
 					]
 				])
 			}
+			val project2request = requests.toMap[project]
 			event.delta.accept [ delta |
 				val resource = delta.resource
 				switch resource {
@@ -69,14 +69,7 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 				}
 				return true
 			]
-			val upstreamChanges = <IResourceDescription.Delta>newArrayList
-			for (entry : project2request.entrySet) {
-				val compilationRequest = entry.value
-				if (compilationRequest.shouldCompile) {
-					compilationRequest.addUpstreamChanges(upstreamChanges)
-					upstreamChanges += compiler.compile(compilationRequest)
-				}
-			}
+			compilerJob.compilationRequests = requests	
 		} catch (Exception exc) {
 			XtextCompilerConsole.log(exc)
 		}

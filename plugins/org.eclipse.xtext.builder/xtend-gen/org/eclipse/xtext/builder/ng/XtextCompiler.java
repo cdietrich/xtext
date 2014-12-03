@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -169,8 +168,9 @@ public class XtextCompiler {
         Set<URI> _toBeUpdated = toBeBuilt.getToBeUpdated();
         Set<URI> _toBeUpdated_1 = request.getToBeUpdated();
         Iterables.<URI>addAll(_toBeUpdated, _toBeUpdated_1);
-        String _projectName = request.getProjectName();
-        final BuildData buildData = new BuildData(_projectName, resourceSet, toBeBuilt, this.queuedBuildData, indexingOnly);
+        IProject _project = request.getProject();
+        String _name = _project.getName();
+        final BuildData buildData = new BuildData(_name, resourceSet, toBeBuilt, this.queuedBuildData, indexingOnly);
         final NullProgressMonitor progress = new NullProgressMonitor();
         final ImmutableList<IResourceDescription.Delta> deltas = this.builderState.update(buildData, progress);
         boolean _and = false;
@@ -183,9 +183,7 @@ public class XtextCompiler {
         if (_and) {
           final IWorkspaceRunnable _function = new IWorkspaceRunnable() {
             public void run(final IProgressMonitor it) throws CoreException {
-              IWorkspaceRoot _root = XtextCompiler.this.workspace.getRoot();
-              String _projectName = request.getProjectName();
-              IProject _project = _root.getProject(_projectName);
+              IProject _project = request.getProject();
               XtextCompiler.BuildContext _buildContext = new XtextCompiler.BuildContext(_project, resourceSet, deltas, buildType);
               XtextCompiler.this.participant.build(_buildContext, progress);
             }
