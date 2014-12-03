@@ -26,6 +26,7 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
 import org.eclipse.xtext.builder.ng.XtextCompiler;
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString;
@@ -65,6 +66,11 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
   }
   
   public void resourceChanged(final IResourceChangeEvent event) {
+    boolean _isUseNewCompiler = BuilderSwitch.isUseNewCompiler();
+    boolean _not = (!_isUseNewCompiler);
+    if (_not) {
+      return;
+    }
     try {
       ResourceChangeEventToString _resourceChangeEventToString = new ResourceChangeEventToString();
       String _apply = _resourceChangeEventToString.apply(event);

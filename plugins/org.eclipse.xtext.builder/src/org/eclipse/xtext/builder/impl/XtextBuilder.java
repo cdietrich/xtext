@@ -23,6 +23,7 @@ import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.builder.IXtextBuilderParticipant.BuildType;
 import org.eclipse.xtext.builder.builderState.IBuilderState;
+import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.resource.IResourceDescription.Delta;
 import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider;
 import org.eclipse.xtext.ui.XtextProjectHelper;
@@ -67,6 +68,9 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 	@SuppressWarnings("rawtypes")
 	@Override
 	protected IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException {
+		if(kind == INCREMENTAL_BUILD && BuilderSwitch.isUseNewCompiler())  
+			return getProject().getReferencedProjects();
+
 		if (IBuildFlag.FORGET_BUILD_STATE_ONLY.isSet(args)) {
 			forgetLastBuiltState();
 			return getProject().getReferencedProjects();

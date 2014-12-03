@@ -46,6 +46,8 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 	}
 
 	override resourceChanged(IResourceChangeEvent event) {
+		if(!BuilderSwitch.isUseNewCompiler)
+			return;
 		try {
 			XtextCompilerConsole.log(new ResourceChangeEventToString().apply(event))
 			val project2request = new LinkedHashMap<IProject, CompilationRequest>

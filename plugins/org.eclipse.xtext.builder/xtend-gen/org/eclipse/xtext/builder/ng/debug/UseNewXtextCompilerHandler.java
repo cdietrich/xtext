@@ -11,7 +11,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.swt.widgets.Event;
-import org.eclipse.swt.widgets.ToolItem;
+import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.xtext.builder.ng.BuilderSwitch;
 
 /**
@@ -22,8 +22,8 @@ public class UseNewXtextCompilerHandler extends AbstractHandler {
   public Object execute(final ExecutionEvent event) throws ExecutionException {
     Object _xblockexpression = null;
     {
-      boolean _isSelected = UseNewXtextCompilerHandler.isSelected(event);
-      BuilderSwitch.setUseNewCompiler(_isSelected);
+      final boolean isSelected = UseNewXtextCompilerHandler.isSelected(event);
+      BuilderSwitch.setUseNewCompiler(isSelected);
       _xblockexpression = null;
     }
     return _xblockexpression;
@@ -31,6 +31,6 @@ public class UseNewXtextCompilerHandler extends AbstractHandler {
   
   private static boolean isSelected(final ExecutionEvent event) {
     Object _trigger = event.getTrigger();
-    return ((ToolItem) ((Event) _trigger).widget).getSelection();
+    return ((MenuItem) ((Event) _trigger).widget).getSelection();
   }
 }

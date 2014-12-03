@@ -11,7 +11,7 @@ import org.eclipse.core.commands.AbstractHandler
 import org.eclipse.core.commands.ExecutionEvent
 import org.eclipse.core.commands.ExecutionException
 import org.eclipse.swt.widgets.Event
-import org.eclipse.swt.widgets.ToolItem
+import org.eclipse.swt.widgets.MenuItem
 import org.eclipse.xtext.builder.ng.BuilderSwitch
 
 /** 
@@ -20,11 +20,12 @@ import org.eclipse.xtext.builder.ng.BuilderSwitch
 class UseNewXtextCompilerHandler extends AbstractHandler {
 	
 	override Object execute(ExecutionEvent event) throws ExecutionException {
-		BuilderSwitch.setUseNewCompiler(event.isSelected)
+		val isSelected = event.isSelected
+		BuilderSwitch.setUseNewCompiler(isSelected)
 		null
 	}
 
 	def private static isSelected(ExecutionEvent event) {
-		(((event.trigger) as Event).widget as ToolItem).selection
+		(((event.trigger) as Event).widget as MenuItem).selection
 	}
 }
