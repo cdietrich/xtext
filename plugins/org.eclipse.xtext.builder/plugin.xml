@@ -76,7 +76,7 @@
       </command>
    </extension>
    <extension point="org.eclipse.ui.menus">
-        <menuContribution locationURI="menu:project?after=additions">
+        <menuContribution locationURI="menu:project?after=buildAutomatically">
 			<command commandId="org.eclipse.xtext.builder.ng.debug.UseNewXtextCompilerCommand" style="toggle">
 			</command>
 		</menuContribution>

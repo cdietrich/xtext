@@ -7,7 +7,6 @@
  */
 package org.eclipse.xtext.builder.ng;
 
-import com.google.common.base.Objects;
 import com.google.inject.Provider;
 import java.util.List;
 import java.util.Set;
@@ -16,7 +15,10 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtend.lib.annotations.Accessors;
 import org.eclipse.xtend2.lib.StringConcatenation;
 import org.eclipse.xtext.resource.IResourceDescription;
+import org.eclipse.xtext.util.CancelIndicator;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
+import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 import org.eclipse.xtext.xbase.lib.Pure;
 
 /**
@@ -31,11 +33,32 @@ public class CompilationRequest {
   
   private String projectName;
   
-  private List<IResourceDescription.Delta> upstreamProjectChanges;
+  private final List<IResourceDescription.Delta> upstreamFileChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
+  
+  private final List<IResourceDescription.Delta> upstreamStructuralFileChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
   
   private boolean computeAffected;
   
   private Provider<ResourceSet> resourceSetProvider;
+  
+  private CancelIndicator monitor;
+  
+  public void addUpstreamChange(final IResourceDescription.Delta change) {
+    boolean _haveEObjectDescriptionsChanged = change.haveEObjectDescriptionsChanged();
+    if (_haveEObjectDescriptionsChanged) {
+      this.upstreamStructuralFileChanges.add(change);
+    }
+    this.upstreamFileChanges.add(change);
+  }
+  
+  public void addUpstreamChanges(final Iterable<IResourceDescription.Delta> changes) {
+    final Procedure1<IResourceDescription.Delta> _function = new Procedure1<IResourceDescription.Delta>() {
+      public void apply(final IResourceDescription.Delta it) {
+        CompilationRequest.this.addUpstreamChange(it);
+      }
+    };
+    IterableExtensions.<IResourceDescription.Delta>forEach(changes, _function);
+  }
   
   public String toString() {
     StringConcatenation _builder = new StringConcatenation();
@@ -80,12 +103,14 @@ public class CompilationRequest {
     }
     _builder.newLineIfNotEmpty();
     _builder.append("  ");
-    int _size = 0;
-    if (this.upstreamProjectChanges!=null) {
-      _size=this.upstreamProjectChanges.size();
-    }
+    int _size = this.upstreamFileChanges.size();
     _builder.append(_size, "  ");
-    _builder.append(" upstreamChanges ");
+    _builder.append(" upstreamFileChanges ");
+    _builder.newLineIfNotEmpty();
+    _builder.append("  ");
+    int _size_1 = this.upstreamStructuralFileChanges.size();
+    _builder.append(_size_1, "  ");
+    _builder.append(" upstreamStructuralFileChanges ");
     _builder.newLineIfNotEmpty();
     return _builder.toString();
   }
@@ -111,15 +136,9 @@ public class CompilationRequest {
     if (_or_1) {
       _or = true;
     } else {
-      boolean _and = false;
-      boolean _notEquals = (!Objects.equal(this.upstreamProjectChanges, null));
-      if (!_notEquals) {
-        _and = false;
-      } else {
-        boolean _isEmpty_2 = this.upstreamProjectChanges.isEmpty();
-        _and = _isEmpty_2;
-      }
-      _or = _and;
+      boolean _isEmpty_2 = this.upstreamFileChanges.isEmpty();
+      boolean _not_2 = (!_isEmpty_2);
+      _or = _not_2;
     }
     return _or;
   }
@@ -144,12 +163,13 @@ public class CompilationRequest {
   }
   
   @Pure
-  public List<IResourceDescription.Delta> getUpstreamProjectChanges() {
-    return this.upstreamProjectChanges;
+  public List<IResourceDescription.Delta> getUpstreamFileChanges() {
+    return this.upstreamFileChanges;
   }
   
-  public void setUpstreamProjectChanges(final List<IResourceDescription.Delta> upstreamProjectChanges) {
-    this.upstreamProjectChanges = upstreamProjectChanges;
+  @Pure
+  public List<IResourceDescription.Delta> getUpstreamStructuralFileChanges() {
+    return this.upstreamStructuralFileChanges;
   }
   
   @Pure
@@ -168,5 +188,14 @@ public class CompilationRequest {
   
   public void setResourceSetProvider(final Provider<ResourceSet> resourceSetProvider) {
     this.resourceSetProvider = resourceSetProvider;
+  }
+  
+  @Pure
+  public CancelIndicator getMonitor() {
+    return this.monitor;
+  }
+  
+  public void setMonitor(final CancelIndicator monitor) {
+    this.monitor = monitor;
   }
 }

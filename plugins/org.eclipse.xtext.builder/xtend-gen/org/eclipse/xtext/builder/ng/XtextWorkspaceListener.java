@@ -7,11 +7,11 @@
  */
 package org.eclipse.xtext.builder.ng;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
@@ -135,16 +135,16 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
         }
       };
       _delta.accept(_function_1);
-      final ArrayList<IResourceDescription.Delta> upstreamDeltas = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
+      final ArrayList<IResourceDescription.Delta> upstreamChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
       Set<Map.Entry<IProject, CompilationRequest>> _entrySet = project2request.entrySet();
       for (final Map.Entry<IProject, CompilationRequest> entry : _entrySet) {
         {
           final CompilationRequest compilationRequest = entry.getValue();
           boolean _shouldCompile = compilationRequest.shouldCompile();
           if (_shouldCompile) {
-            compilationRequest.setUpstreamProjectChanges(upstreamDeltas);
-            List<IResourceDescription.Delta> _compile = this.compiler.compile(compilationRequest);
-            Iterables.<IResourceDescription.Delta>addAll(upstreamDeltas, _compile);
+            compilationRequest.addUpstreamChanges(upstreamChanges);
+            ImmutableList<IResourceDescription.Delta> _compile = this.compiler.compile(compilationRequest);
+            Iterables.<IResourceDescription.Delta>addAll(upstreamChanges, _compile);
           }
         }
       }

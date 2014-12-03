@@ -14,14 +14,13 @@ import org.eclipse.core.resources.IResourceChangeEvent
 import org.eclipse.core.resources.IResourceChangeListener
 import org.eclipse.core.resources.IStorage
 import org.eclipse.core.resources.IWorkspace
+import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString
+import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
 import org.eclipse.xtext.resource.IResourceDescription
 import org.eclipse.xtext.ui.resource.IResourceSetProvider
 import org.eclipse.xtext.ui.resource.IStorage2UriMapper
 
 import static org.eclipse.core.resources.IResourceDelta.*
-import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
-import org.eclipse.xtext.builder.ng.debug.ResourceDeltaToString
-import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -68,12 +67,12 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 				}
 				return true
 			]
-			val upstreamDeltas = <IResourceDescription.Delta>newArrayList
+			val upstreamChanges = <IResourceDescription.Delta>newArrayList
 			for (entry : project2request.entrySet) {
 				val compilationRequest = entry.value
 				if (compilationRequest.shouldCompile) {
-					compilationRequest.upstreamProjectChanges = upstreamDeltas
-					upstreamDeltas += compiler.compile(compilationRequest)
+					compilationRequest.addUpstreamChanges(upstreamChanges)
+					upstreamChanges += compiler.compile(compilationRequest)
 				}
 			}
 		} catch (Exception exc) {

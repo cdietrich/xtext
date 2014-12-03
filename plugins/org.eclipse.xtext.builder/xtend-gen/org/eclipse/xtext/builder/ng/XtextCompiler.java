@@ -7,23 +7,198 @@
  */
 package org.eclipse.xtext.builder.ng;
 
-import java.util.List;
+import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+import java.util.Map;
+import java.util.Set;
+import org.eclipse.core.internal.resources.Workspace;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.IWorkspaceRunnable;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.xtend.lib.annotations.Data;
+import org.eclipse.xtext.builder.IXtextBuilderParticipant;
+import org.eclipse.xtext.builder.builderState.IBuilderState;
+import org.eclipse.xtext.builder.impl.BuildData;
+import org.eclipse.xtext.builder.impl.QueuedBuildData;
+import org.eclipse.xtext.builder.impl.RegistryBuilderParticipant;
+import org.eclipse.xtext.builder.impl.ToBeBuilt;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
-import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.resource.IResourceDescription;
-import org.eclipse.xtext.xbase.lib.CollectionLiterals;
+import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider;
+import org.eclipse.xtext.xbase.lib.Exceptions;
+import org.eclipse.xtext.xbase.lib.Pure;
+import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
 
 /**
- * @author koehnlein - Initial contribution and API
+ * @author Jan Koehnlein - Initial contribution and API
  */
 @SuppressWarnings("all")
 public class XtextCompiler {
-  public List<IResourceDescription.Delta> compile(final CompilationRequest compilationRequest) {
-    List<IResourceDescription.Delta> _xblockexpression = null;
-    {
-      XtextCompilerConsole.log(compilationRequest);
-      _xblockexpression = CollectionLiterals.<IResourceDescription.Delta>emptyList();
+  @Data
+  public static class BuildContext implements IXtextBuilderParticipant.IBuildContext {
+    private final IProject builtProject;
+    
+    private final ResourceSet resourceSet;
+    
+    private final ImmutableList<IResourceDescription.Delta> deltas;
+    
+    private final IXtextBuilderParticipant.BuildType buildType;
+    
+    public void needRebuild() {
     }
-    return _xblockexpression;
+    
+    public BuildContext(final IProject builtProject, final ResourceSet resourceSet, final ImmutableList<IResourceDescription.Delta> deltas, final IXtextBuilderParticipant.BuildType buildType) {
+      super();
+      this.builtProject = builtProject;
+      this.resourceSet = resourceSet;
+      this.deltas = deltas;
+      this.buildType = buildType;
+    }
+    
+    @Override
+    @Pure
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((this.builtProject== null) ? 0 : this.builtProject.hashCode());
+      result = prime * result + ((this.resourceSet== null) ? 0 : this.resourceSet.hashCode());
+      result = prime * result + ((this.deltas== null) ? 0 : this.deltas.hashCode());
+      result = prime * result + ((this.buildType== null) ? 0 : this.buildType.hashCode());
+      return result;
+    }
+    
+    @Override
+    @Pure
+    public boolean equals(final Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      XtextCompiler.BuildContext other = (XtextCompiler.BuildContext) obj;
+      if (this.builtProject == null) {
+        if (other.builtProject != null)
+          return false;
+      } else if (!this.builtProject.equals(other.builtProject))
+        return false;
+      if (this.resourceSet == null) {
+        if (other.resourceSet != null)
+          return false;
+      } else if (!this.resourceSet.equals(other.resourceSet))
+        return false;
+      if (this.deltas == null) {
+        if (other.deltas != null)
+          return false;
+      } else if (!this.deltas.equals(other.deltas))
+        return false;
+      if (this.buildType == null) {
+        if (other.buildType != null)
+          return false;
+      } else if (!this.buildType.equals(other.buildType))
+        return false;
+      return true;
+    }
+    
+    @Override
+    @Pure
+    public String toString() {
+      ToStringBuilder b = new ToStringBuilder(this);
+      b.add("builtProject", this.builtProject);
+      b.add("resourceSet", this.resourceSet);
+      b.add("deltas", this.deltas);
+      b.add("buildType", this.buildType);
+      return b.toString();
+    }
+    
+    @Pure
+    public IProject getBuiltProject() {
+      return this.builtProject;
+    }
+    
+    @Pure
+    public ResourceSet getResourceSet() {
+      return this.resourceSet;
+    }
+    
+    @Pure
+    public ImmutableList<IResourceDescription.Delta> getDeltas() {
+      return this.deltas;
+    }
+    
+    @Pure
+    public IXtextBuilderParticipant.BuildType getBuildType() {
+      return this.buildType;
+    }
+  }
+  
+  @Inject
+  private IBuilderState builderState;
+  
+  @Inject
+  private QueuedBuildData queuedBuildData;
+  
+  @Inject
+  private RegistryBuilderParticipant participant;
+  
+  @Inject
+  private Workspace workspace;
+  
+  public ImmutableList<IResourceDescription.Delta> compile(final CompilationRequest request) {
+    try {
+      ImmutableList<IResourceDescription.Delta> _xblockexpression = null;
+      {
+        final IXtextBuilderParticipant.BuildType buildType = IXtextBuilderParticipant.BuildType.INCREMENTAL;
+        final boolean indexingOnly = Objects.equal(buildType, IXtextBuilderParticipant.BuildType.RECOVERY);
+        Provider<ResourceSet> _resourceSetProvider = request.getResourceSetProvider();
+        final ResourceSet resourceSet = _resourceSetProvider.get();
+        Map<Object, Object> _loadOptions = resourceSet.getLoadOptions();
+        _loadOptions.put(ResourceDescriptionsProvider.NAMED_BUILDER_SCOPE, Boolean.valueOf(true));
+        final ToBeBuilt toBeBuilt = new ToBeBuilt();
+        Set<URI> _toBeDeleted = toBeBuilt.getToBeDeleted();
+        Set<URI> _toBeDeleted_1 = request.getToBeDeleted();
+        Iterables.<URI>addAll(_toBeDeleted, _toBeDeleted_1);
+        Set<URI> _toBeUpdated = toBeBuilt.getToBeUpdated();
+        Set<URI> _toBeUpdated_1 = request.getToBeUpdated();
+        Iterables.<URI>addAll(_toBeUpdated, _toBeUpdated_1);
+        String _projectName = request.getProjectName();
+        final BuildData buildData = new BuildData(_projectName, resourceSet, toBeBuilt, this.queuedBuildData, indexingOnly);
+        final NullProgressMonitor progress = new NullProgressMonitor();
+        final ImmutableList<IResourceDescription.Delta> deltas = this.builderState.update(buildData, progress);
+        boolean _and = false;
+        boolean _notEquals = (!Objects.equal(this.participant, null));
+        if (!_notEquals) {
+          _and = false;
+        } else {
+          _and = (!indexingOnly);
+        }
+        if (_and) {
+          final IWorkspaceRunnable _function = new IWorkspaceRunnable() {
+            public void run(final IProgressMonitor it) throws CoreException {
+              IWorkspaceRoot _root = XtextCompiler.this.workspace.getRoot();
+              String _projectName = request.getProjectName();
+              IProject _project = _root.getProject(_projectName);
+              XtextCompiler.BuildContext _buildContext = new XtextCompiler.BuildContext(_project, resourceSet, deltas, buildType);
+              XtextCompiler.this.participant.build(_buildContext, progress);
+            }
+          };
+          this.workspace.run(_function, progress);
+        } else {
+          progress.worked(1);
+        }
+        _xblockexpression = deltas;
+      }
+      return _xblockexpression;
+    } catch (Throwable _e) {
+      throw Exceptions.sneakyThrow(_e);
+    }
   }
 }

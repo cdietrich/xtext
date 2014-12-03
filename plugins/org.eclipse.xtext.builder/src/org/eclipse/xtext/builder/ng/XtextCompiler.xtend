@@ -7,18 +7,69 @@
  *******************************************************************************/
 package org.eclipse.xtext.builder.ng
 
-import java.util.List
-import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
-import org.eclipse.xtext.resource.IResourceDescription
+import com.google.common.collect.ImmutableList
+import com.google.inject.Inject
+import org.eclipse.core.internal.resources.Workspace
+import org.eclipse.core.resources.IProject
+import org.eclipse.core.runtime.NullProgressMonitor
+import org.eclipse.emf.ecore.resource.ResourceSet
+import org.eclipse.xtend.lib.annotations.Data
+import org.eclipse.xtext.builder.IXtextBuilderParticipant
+import org.eclipse.xtext.builder.IXtextBuilderParticipant.BuildType
+import org.eclipse.xtext.builder.builderState.IBuilderState
+import org.eclipse.xtext.builder.impl.BuildData
+import org.eclipse.xtext.builder.impl.QueuedBuildData
+import org.eclipse.xtext.builder.impl.RegistryBuilderParticipant
+import org.eclipse.xtext.builder.impl.ToBeBuilt
+import org.eclipse.xtext.resource.IResourceDescription.Delta
+import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider
 
 /**
- * @author koehnlein - Initial contribution and API
+ * @author Jan Koehnlein - Initial contribution and API
  */
 class XtextCompiler {
-	
-	def List<IResourceDescription.Delta> compile(CompilationRequest compilationRequest) {
-		XtextCompilerConsole.log(compilationRequest)		
-		emptyList
-	}	
-	
+
+	@Inject IBuilderState builderState
+
+	@Inject QueuedBuildData queuedBuildData
+
+	@Inject RegistryBuilderParticipant participant
+
+	@Inject Workspace workspace
+
+	def compile(CompilationRequest request) {
+		val buildType = BuildType.INCREMENTAL
+		val indexingOnly = buildType == BuildType.RECOVERY
+		val resourceSet = request.resourceSetProvider.get
+		resourceSet.loadOptions.put(ResourceDescriptionsProvider.NAMED_BUILDER_SCOPE, true)
+		val toBeBuilt = new ToBeBuilt
+		toBeBuilt.toBeDeleted += request.toBeDeleted
+		toBeBuilt.toBeUpdated += request.toBeUpdated
+		val buildData = new BuildData(request.projectName, resourceSet, toBeBuilt, queuedBuildData, indexingOnly)
+		val progress = new NullProgressMonitor
+		val deltas = builderState.update(buildData, progress)
+		if (participant != null && !indexingOnly) {
+			workspace.run(
+				[
+					participant.build(new BuildContext(workspace.root.getProject(request.projectName), resourceSet, deltas, buildType), progress);
+				], progress)
+		} else {
+			progress.worked(1);
+		}
+		deltas
+	}
+
+	@Data
+	static class BuildContext implements IXtextBuilderParticipant.IBuildContext {
+
+		val IProject builtProject 
+		val ResourceSet resourceSet
+		val ImmutableList<Delta> deltas
+		val BuildType buildType
+		
+		override needRebuild() {
+			// I suppose this is no longer needed
+		}
+	}
+
 }
