@@ -9,15 +9,16 @@ package org.eclipse.xtext.builder.ng
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import java.util.Map
+import java.util.Set
+import org.eclipse.core.resources.IProject
 import org.eclipse.core.resources.IResource
 import org.eclipse.core.resources.IResourceChangeEvent
 import org.eclipse.core.resources.IResourceChangeListener
 import org.eclipse.core.resources.IResourceDelta
 import org.eclipse.core.resources.IStorage
 import org.eclipse.core.resources.IWorkspace
-import org.eclipse.jdt.core.ElementChangedEvent
-import org.eclipse.jdt.core.IElementChangedListener
-import org.eclipse.jdt.core.JavaCore
+import org.eclipse.emf.common.util.URI
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
 import org.eclipse.xtext.ui.resource.IResourceSetProvider
@@ -30,7 +31,7 @@ import static org.eclipse.core.resources.IResourceDelta.*
  * @author Jan Koehnlein - Initial contribution and API
  */
 @Singleton
-class XtextWorkspaceListener implements IResourceChangeListener, IElementChangedListener {
+class XtextWorkspaceListener implements IResourceChangeListener {
 
 	@Inject IStorage2UriMapper storage2UriMapper
 
@@ -46,11 +47,9 @@ class XtextWorkspaceListener implements IResourceChangeListener, IElementChanged
 	def register(IWorkspace workspace) {
 		this.workspace = workspace
 		workspace.addResourceChangeListener(this)
-		JavaCore.addElementChangedListener(this, ElementChangedEvent.POST_CHANGE)
 	}
 
 	def deregister() {
-		JavaCore.removeElementChangedListener(this)
 		workspace.removeResourceChangeListener(this)
 	}
 
@@ -73,24 +72,10 @@ class XtextWorkspaceListener implements IResourceChangeListener, IElementChanged
 				if(delta.flags != IResourceDelta.MARKERS) {
 					val resource = delta.resource
 					switch resource {
-						IStorage case delta.kind == REMOVED: {
-							if(isBinaryJavaResource(resource)) {
-								project2request.get(resource.project).forceBuild = true
-							} else {
-								val uri = storage2UriMapper.getUri(resource)
-								if(uri != null && uriValidator.canBuild(uri, resource))
-									project2request.get(resource.project).toBeDeleted += uri
-							}
-						}
-						IStorage case delta.kind == ADDED || delta.kind == CHANGED: {
-							if(isBinaryJavaResource(resource)) {
-								project2request.get(resource.project).forceBuild = true
-							} else {
-								val uri = storage2UriMapper.getUri(resource)
-								if(uri != null && uriValidator.canBuild(uri, resource))
-									project2request.get(resource.project).toBeUpdated += uri
-							}
-						}
+						IStorage case delta.kind == REMOVED: 
+							resource.addToCompilationRequest(project2request) [toBeDeleted]
+						IStorage case delta.kind == ADDED || delta.kind == CHANGED: 
+							resource.addToCompilationRequest(project2request) [toBeUpdated]
 					}
 					return true
 				}
@@ -99,15 +84,20 @@ class XtextWorkspaceListener implements IResourceChangeListener, IElementChanged
 		} catch (Exception exc) {
 			XtextCompilerConsole.log(exc)
 		}
-		
 	}
 	
-	def isBinaryJavaResource(IResource resource) {
+	protected def addToCompilationRequest(IResource resource, Map<IProject, CompilationRequest> project2request,
+			(CompilationRequest)=>Set<URI> uriList) {
+		if(isBinaryJavaResource(resource)) {
+			project2request.get(resource.project).forceBuild = true
+		} else if(resource instanceof IStorage) {
+			val uri = storage2UriMapper.getUri(resource)
+			if(uri != null && uriValidator.canBuild(uri, resource))
+				uriList.apply(project2request.get(resource.project)) += uri
+		}
+	}
+	
+	protected def isBinaryJavaResource(IResource resource) {
 		#{'class', 'jar'}.contains(resource.fileExtension)
 	}
-	
-	override elementChanged(ElementChangedEvent event) {
-		XtextCompilerConsole.log(event)
-	}
-	
 }

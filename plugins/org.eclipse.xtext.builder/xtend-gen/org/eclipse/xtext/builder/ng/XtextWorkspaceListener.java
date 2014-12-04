@@ -27,9 +27,6 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.jdt.core.ElementChangedEvent;
-import org.eclipse.jdt.core.IElementChangedListener;
-import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
 import org.eclipse.xtext.builder.ng.CompilerJob;
@@ -50,7 +47,7 @@ import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
  */
 @Singleton
 @SuppressWarnings("all")
-public class XtextWorkspaceListener implements IResourceChangeListener, IElementChangedListener {
+public class XtextWorkspaceListener implements IResourceChangeListener {
   @Inject
   private IStorage2UriMapper storage2UriMapper;
   
@@ -69,11 +66,9 @@ public class XtextWorkspaceListener implements IResourceChangeListener, IElement
   public void register(final IWorkspace workspace) {
     this.workspace = workspace;
     workspace.addResourceChangeListener(this);
-    JavaCore.addElementChangedListener(this, ElementChangedEvent.POST_CHANGE);
   }
   
   public void deregister() {
-    JavaCore.removeElementChangedListener(this);
     this.workspace.removeResourceChangeListener(this);
   }
   
@@ -127,28 +122,12 @@ public class XtextWorkspaceListener implements IResourceChangeListener, IElement
                 boolean _equals = (_kind == IResourceDelta.REMOVED);
                 if (_equals) {
                   _matched=true;
-                  boolean _isBinaryJavaResource = XtextWorkspaceListener.this.isBinaryJavaResource(resource);
-                  if (_isBinaryJavaResource) {
-                    IProject _project = resource.getProject();
-                    CompilationRequest _get = project2request.get(_project);
-                    _get.setForceBuild(true);
-                  } else {
-                    final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
-                    boolean _and = false;
-                    boolean _notEquals_1 = (!Objects.equal(uri, null));
-                    if (!_notEquals_1) {
-                      _and = false;
-                    } else {
-                      boolean _canBuild = XtextWorkspaceListener.this.uriValidator.canBuild(uri, ((IStorage)resource));
-                      _and = _canBuild;
+                  final Function1<CompilationRequest, Set<URI>> _function = new Function1<CompilationRequest, Set<URI>>() {
+                    public Set<URI> apply(final CompilationRequest it) {
+                      return it.getToBeDeleted();
                     }
-                    if (_and) {
-                      IProject _project_1 = resource.getProject();
-                      CompilationRequest _get_1 = project2request.get(_project_1);
-                      Set<URI> _toBeDeleted = _get_1.getToBeDeleted();
-                      _toBeDeleted.add(uri);
-                    }
-                  }
+                  };
+                  XtextWorkspaceListener.this.addToCompilationRequest(resource, project2request, _function);
                 }
               }
             }
@@ -166,28 +145,12 @@ public class XtextWorkspaceListener implements IResourceChangeListener, IElement
                 }
                 if (_or) {
                   _matched=true;
-                  boolean _isBinaryJavaResource = XtextWorkspaceListener.this.isBinaryJavaResource(resource);
-                  if (_isBinaryJavaResource) {
-                    IProject _project = resource.getProject();
-                    CompilationRequest _get = project2request.get(_project);
-                    _get.setForceBuild(true);
-                  } else {
-                    final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
-                    boolean _and = false;
-                    boolean _notEquals_1 = (!Objects.equal(uri, null));
-                    if (!_notEquals_1) {
-                      _and = false;
-                    } else {
-                      boolean _canBuild = XtextWorkspaceListener.this.uriValidator.canBuild(uri, ((IStorage)resource));
-                      _and = _canBuild;
+                  final Function1<CompilationRequest, Set<URI>> _function = new Function1<CompilationRequest, Set<URI>>() {
+                    public Set<URI> apply(final CompilationRequest it) {
+                      return it.getToBeUpdated();
                     }
-                    if (_and) {
-                      IProject _project_1 = resource.getProject();
-                      CompilationRequest _get_1 = project2request.get(_project_1);
-                      Set<URI> _toBeUpdated = _get_1.getToBeUpdated();
-                      _toBeUpdated.add(uri);
-                    }
-                  }
+                  };
+                  XtextWorkspaceListener.this.addToCompilationRequest(resource, project2request, _function);
                 }
               }
             }
@@ -208,12 +171,45 @@ public class XtextWorkspaceListener implements IResourceChangeListener, IElement
     }
   }
   
-  public boolean isBinaryJavaResource(final IResource resource) {
-    String _fileExtension = resource.getFileExtension();
-    return Collections.<String>unmodifiableSet(CollectionLiterals.<String>newHashSet("class", "jar")).contains(_fileExtension);
+  protected Boolean addToCompilationRequest(final IResource resource, final Map<IProject, CompilationRequest> project2request, final Function1<? super CompilationRequest, ? extends Set<URI>> uriList) {
+    boolean _xifexpression = false;
+    boolean _isBinaryJavaResource = this.isBinaryJavaResource(resource);
+    if (_isBinaryJavaResource) {
+      IProject _project = resource.getProject();
+      CompilationRequest _get = project2request.get(_project);
+      _get.setForceBuild(true);
+    } else {
+      boolean _xifexpression_1 = false;
+      if ((resource instanceof IStorage)) {
+        boolean _xblockexpression = false;
+        {
+          final URI uri = this.storage2UriMapper.getUri(((IStorage)resource));
+          boolean _xifexpression_2 = false;
+          boolean _and = false;
+          boolean _notEquals = (!Objects.equal(uri, null));
+          if (!_notEquals) {
+            _and = false;
+          } else {
+            boolean _canBuild = this.uriValidator.canBuild(uri, ((IStorage)resource));
+            _and = _canBuild;
+          }
+          if (_and) {
+            IProject _project_1 = resource.getProject();
+            CompilationRequest _get_1 = project2request.get(_project_1);
+            Set<URI> _apply = uriList.apply(_get_1);
+            _xifexpression_2 = _apply.add(uri);
+          }
+          _xblockexpression = _xifexpression_2;
+        }
+        _xifexpression_1 = _xblockexpression;
+      }
+      _xifexpression = _xifexpression_1;
+    }
+    return Boolean.valueOf(_xifexpression);
   }
   
-  public void elementChanged(final ElementChangedEvent event) {
-    XtextCompilerConsole.log(event);
+  protected boolean isBinaryJavaResource(final IResource resource) {
+    String _fileExtension = resource.getFileExtension();
+    return Collections.<String>unmodifiableSet(CollectionLiterals.<String>newHashSet("class", "jar")).contains(_fileExtension);
   }
 }
