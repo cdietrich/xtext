@@ -8,6 +8,7 @@
 package org.eclipse.xtext.builder.ng;
 
 import com.google.inject.Provider;
+import java.util.List;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -15,6 +16,7 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtend.lib.annotations.Accessors;
 import org.eclipse.xtend2.lib.StringConcatenation;
+import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Pure;
 
@@ -29,6 +31,8 @@ public class CompilationRequest {
   private final Set<URI> toBeDeleted = CollectionLiterals.<URI>newHashSet();
   
   private IProject project;
+  
+  private final List<IResourceDescription.Delta> upstreamFileChanges = CollectionLiterals.<IResourceDescription.Delta>newArrayList();
   
   private boolean computeAffected;
   
@@ -79,25 +83,38 @@ public class CompilationRequest {
       }
     }
     _builder.newLineIfNotEmpty();
+    _builder.append("  ");
+    int _size = this.upstreamFileChanges.size();
+    _builder.append(_size, "  ");
+    _builder.append(" upstreamFileChanges ");
+    _builder.newLineIfNotEmpty();
     return _builder.toString();
   }
   
   public boolean shouldCompile() {
     boolean _or = false;
     boolean _or_1 = false;
+    boolean _or_2 = false;
     if (this.computeAffected) {
-      _or_1 = true;
+      _or_2 = true;
     } else {
       boolean _isEmpty = this.toBeDeleted.isEmpty();
       boolean _not = (!_isEmpty);
-      _or_1 = _not;
+      _or_2 = _not;
+    }
+    if (_or_2) {
+      _or_1 = true;
+    } else {
+      boolean _isEmpty_1 = this.toBeUpdated.isEmpty();
+      boolean _not_1 = (!_isEmpty_1);
+      _or_1 = _not_1;
     }
     if (_or_1) {
       _or = true;
     } else {
-      boolean _isEmpty_1 = this.toBeUpdated.isEmpty();
-      boolean _not_1 = (!_isEmpty_1);
-      _or = _not_1;
+      boolean _isEmpty_2 = this.upstreamFileChanges.isEmpty();
+      boolean _not_2 = (!_isEmpty_2);
+      _or = _not_2;
     }
     return _or;
   }
@@ -119,6 +136,11 @@ public class CompilationRequest {
   
   public void setProject(final IProject project) {
     this.project = project;
+  }
+  
+  @Pure
+  public List<IResourceDescription.Delta> getUpstreamFileChanges() {
+    return this.upstreamFileChanges;
   }
   
   @Pure

@@ -30,6 +30,7 @@ import org.eclipse.xtext.builder.impl.QueuedBuildData;
 import org.eclipse.xtext.builder.impl.RegistryBuilderParticipant;
 import org.eclipse.xtext.builder.impl.ToBeBuilt;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
+import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider;
 import org.eclipse.xtext.xbase.lib.Exceptions;
@@ -155,6 +156,7 @@ public class XtextCompiler {
     try {
       ImmutableList<IResourceDescription.Delta> _xblockexpression = null;
       {
+        XtextCompilerConsole.log(("Compiling " + request));
         final IXtextBuilderParticipant.BuildType buildType = IXtextBuilderParticipant.BuildType.INCREMENTAL;
         final boolean indexingOnly = Objects.equal(buildType, IXtextBuilderParticipant.BuildType.RECOVERY);
         Provider<ResourceSet> _resourceSetProvider = request.getResourceSetProvider();

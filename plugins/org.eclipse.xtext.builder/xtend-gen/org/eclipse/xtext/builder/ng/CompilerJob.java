@@ -8,6 +8,7 @@
 package org.eclipse.xtext.builder.ng;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import java.util.ArrayList;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -23,10 +26,13 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
-import org.eclipse.xtext.builder.ng.ProjectUtility;
+import org.eclipse.xtext.builder.ng.ProjectDependencies;
 import org.eclipse.xtext.builder.ng.XtextCompiler;
+import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
+import org.eclipse.xtext.xbase.lib.Conversions;
 import org.eclipse.xtext.xbase.lib.Exceptions;
+import org.eclipse.xtext.xbase.lib.Extension;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
 
@@ -38,7 +44,13 @@ public class CompilerJob extends Job {
   @Inject
   private XtextCompiler compiler;
   
+  @Inject
+  private IWorkspace workspace;
+  
   private LinkedList<CompilationRequest> requests = CollectionLiterals.<CompilationRequest>newLinkedList();
+  
+  @Extension
+  private ProjectDependencies projectDependencies;
   
   public CompilerJob() {
     super("XtextCompilerJob");
@@ -64,12 +76,21 @@ public class CompilerJob extends Job {
     }
     final ArrayList<CompilationRequest> pendingRequests = this.drainRequests();
     final CompilationRequest currentRequest = IterableExtensions.<CompilationRequest>head(pendingRequests);
+    IWorkspaceRoot _root = this.workspace.getRoot();
+    IProject[] _projects = _root.getProjects();
+    ProjectDependencies _projectDependencies = new ProjectDependencies((Iterable<IProject>)Conversions.doWrapArray(_projects));
+    this.projectDependencies = _projectDependencies;
     boolean _notEquals = (!Objects.equal(currentRequest, null));
     if (_notEquals) {
       IProject _project = currentRequest.getProject();
-      CompilationRequest _head = IterableExtensions.<CompilationRequest>head(newRequests);
-      IProject _project_1 = _head.getProject();
-      boolean _dependsOn = ProjectUtility.dependsOn(_project, _project_1);
+      final Function1<CompilationRequest, Boolean> _function_1 = new Function1<CompilationRequest, Boolean>() {
+        public Boolean apply(final CompilationRequest it) {
+          return Boolean.valueOf(CompilerJob.this.shouldSchedule());
+        }
+      };
+      CompilationRequest _findFirst = IterableExtensions.<CompilationRequest>findFirst(newRequests, _function_1);
+      IProject _project_1 = _findFirst.getProject();
+      boolean _dependsOn = this.projectDependencies.dependsOn(_project, _project_1);
       if (_dependsOn) {
         this.cancel();
       }
@@ -77,12 +98,12 @@ public class CompilerJob extends Job {
     boolean _isEmpty_1 = pendingRequests.isEmpty();
     boolean _not_1 = (!_isEmpty_1);
     if (_not_1) {
-      final Function1<CompilationRequest, IProject> _function_1 = new Function1<CompilationRequest, IProject>() {
+      final Function1<CompilationRequest, IProject> _function_2 = new Function1<CompilationRequest, IProject>() {
         public IProject apply(final CompilationRequest it) {
           return it.getProject();
         }
       };
-      final Map<IProject, CompilationRequest> project2request = IterableExtensions.<IProject, CompilationRequest>toMap(newRequests, _function_1);
+      final Map<IProject, CompilationRequest> project2request = IterableExtensions.<IProject, CompilationRequest>toMap(newRequests, _function_2);
       for (final CompilationRequest pending : pendingRequests) {
         {
           IProject _project_2 = pending.getProject();
@@ -131,13 +152,35 @@ public class CompilerJob extends Job {
             return Status.OK_STATUS;
           }
           currentRequest.setMonitor(monitor);
-          this.compiler.compile(currentRequest);
+          final ImmutableList<IResourceDescription.Delta> deltas = this.compiler.compile(currentRequest);
           /* this.requests; */
           synchronized (this.requests) {
             boolean _isEmpty = this.requests.isEmpty();
             boolean _not = (!_isEmpty);
             if (_not) {
               this.requests.removeFirst();
+              boolean _isEmpty_1 = deltas.isEmpty();
+              boolean _not_1 = (!_isEmpty_1);
+              if (_not_1) {
+                IProject _project = currentRequest.getProject();
+                Iterable<IProject> _allDownstream = this.projectDependencies.getAllDownstream(_project);
+                for (final IProject downstream : _allDownstream) {
+                  final Function1<CompilationRequest, Boolean> _function = new Function1<CompilationRequest, Boolean>() {
+                    public Boolean apply(final CompilationRequest it) {
+                      IProject _project = it.getProject();
+                      return Boolean.valueOf(Objects.equal(_project, downstream));
+                    }
+                  };
+                  CompilationRequest _findFirst = IterableExtensions.<CompilationRequest>findFirst(this.requests, _function);
+                  List<IResourceDescription.Delta> _upstreamFileChanges = null;
+                  if (_findFirst!=null) {
+                    _upstreamFileChanges=_findFirst.getUpstreamFileChanges();
+                  }
+                  if (_upstreamFileChanges!=null) {
+                    _upstreamFileChanges.addAll(deltas);
+                  }
+                }
+              }
             }
           }
         }

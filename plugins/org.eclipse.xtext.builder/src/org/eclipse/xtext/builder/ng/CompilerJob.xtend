@@ -15,8 +15,7 @@ import org.eclipse.core.runtime.IProgressMonitor
 import org.eclipse.core.runtime.OperationCanceledException
 import org.eclipse.core.runtime.Status
 import org.eclipse.core.runtime.jobs.Job
-
-import static extension org.eclipse.xtext.builder.ng.ProjectUtility.*
+import org.eclipse.core.resources.IWorkspace
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -25,7 +24,11 @@ class CompilerJob extends Job {
 	
 	@Inject XtextCompiler compiler
 	
+	@Inject IWorkspace workspace
+	
 	LinkedList<CompilationRequest> requests = newLinkedList
+	
+	extension ProjectDependencies projectDependencies
 	
 	new() {
 		super("XtextCompilerJob")
@@ -36,8 +39,9 @@ class CompilerJob extends Job {
 			return
 		val pendingRequests = drainRequests
 		val currentRequest = pendingRequests.head
+		projectDependencies = new ProjectDependencies(workspace.root.projects)
 		if(currentRequest != null) {
-			if(currentRequest.project.dependsOn(newRequests.head.project)) 
+			if(currentRequest.project.dependsOn(newRequests.findFirst[shouldSchedule].project)) 
 				cancel
 		}
 		if(!pendingRequests.empty) {
@@ -70,10 +74,15 @@ class CompilerJob extends Job {
 				if(currentRequest == null)
 					return Status.OK_STATUS
 				currentRequest.monitor = monitor
-				compiler.compile(currentRequest)
+				val deltas = compiler.compile(currentRequest)
 				synchronized (requests) {
-					if(!requests.empty)
+					if(!requests.empty) {
 						requests.removeFirst
+						if(!deltas.empty) {
+							for(downstream: currentRequest.project.allDownstream) 
+								requests.findFirst[project == downstream]?.upstreamFileChanges?.addAll(deltas)
+						}					
+					}
 				}
 			} 
 		} catch(OperationCanceledException e) {

@@ -23,6 +23,7 @@ import org.eclipse.xtext.builder.impl.RegistryBuilderParticipant
 import org.eclipse.xtext.builder.impl.ToBeBuilt
 import org.eclipse.xtext.resource.IResourceDescription.Delta
 import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider
+import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -38,6 +39,7 @@ class XtextCompiler {
 	@Inject IWorkspace workspace
 
 	def compile(CompilationRequest request) {
+		XtextCompilerConsole.log('Compiling ' + request)
 		val buildType = BuildType.INCREMENTAL
 		val indexingOnly = buildType == BuildType.RECOVERY
 		val resourceSet = request.resourceSetProvider.get

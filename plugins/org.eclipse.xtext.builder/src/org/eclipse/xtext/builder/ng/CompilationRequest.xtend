@@ -14,6 +14,8 @@ import org.eclipse.core.runtime.IProgressMonitor
 import org.eclipse.emf.common.util.URI
 import org.eclipse.emf.ecore.resource.ResourceSet
 import org.eclipse.xtend.lib.annotations.Accessors
+import org.eclipse.xtext.resource.IResourceDescription
+import java.util.List
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -26,7 +28,7 @@ class CompilationRequest {
 
 	IProject project
 
-//	val List<IResourceDescription.Delta> upstreamFileChanges = newArrayList
+	val List<IResourceDescription.Delta> upstreamFileChanges = newArrayList
 //	val List<IResourceDescription.Delta> upstreamStructuralFileChanges = newArrayList
 
 	boolean computeAffected
@@ -34,7 +36,7 @@ class CompilationRequest {
 	Provider<ResourceSet> resourceSetProvider
 
 	IProgressMonitor monitor
-
+	
 //	def void addUpstreamChange(IResourceDescription.Delta change) {
 //		if (change.haveEObjectDescriptionsChanged)
 //			upstreamStructuralFileChanges += change
@@ -49,12 +51,11 @@ class CompilationRequest {
 		CompilationRequest: «project.name»:
 		  delete: «FOR uri : toBeDeleted SEPARATOR ','»«uri?.lastSegment»«ENDFOR»
 		  update: «FOR uri : toBeUpdated SEPARATOR ','»«uri?.lastSegment»«ENDFOR»
-«««		  «upstreamFileChanges.size» upstreamFileChanges 
+		  «upstreamFileChanges.size» upstreamFileChanges 
 «««		  «upstreamStructuralFileChanges.size» upstreamStructuralFileChanges 
 	'''
 
 	def boolean shouldCompile() {
-		computeAffected || !toBeDeleted.empty || !toBeUpdated.empty 
-//		|| !upstreamFileChanges.empty
+		computeAffected || !toBeDeleted.empty || !toBeUpdated.empty || !upstreamFileChanges.empty
 	}
 }
