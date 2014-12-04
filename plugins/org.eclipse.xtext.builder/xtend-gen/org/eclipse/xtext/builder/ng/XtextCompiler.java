@@ -39,6 +39,7 @@ import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 @SuppressWarnings("all")
 public class XtextCompiler {

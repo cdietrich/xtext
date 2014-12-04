@@ -11,6 +11,7 @@ import org.eclipse.xtend.lib.annotations.Accessors
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 class BuilderSwitch {
 	

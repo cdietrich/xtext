@@ -38,9 +38,10 @@ import org.eclipse.xtext.xbase.lib.IterableExtensions;
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 @SuppressWarnings("all")
-public class CompilerJob extends Job {
+public class XtextCompilerJob extends Job {
   @Inject
   private XtextCompiler compiler;
   
@@ -52,7 +53,7 @@ public class CompilerJob extends Job {
   @Extension
   private ProjectDependencies projectDependencies;
   
-  public CompilerJob() {
+  public XtextCompilerJob() {
     super("XtextCompilerJob");
   }
   
@@ -85,7 +86,7 @@ public class CompilerJob extends Job {
       IProject _project = currentRequest.getProject();
       final Function1<CompilationRequest, Boolean> _function_1 = new Function1<CompilationRequest, Boolean>() {
         public Boolean apply(final CompilationRequest it) {
-          return Boolean.valueOf(CompilerJob.this.shouldSchedule());
+          return Boolean.valueOf(XtextCompilerJob.this.shouldSchedule());
         }
       };
       CompilationRequest _findFirst = IterableExtensions.<CompilationRequest>findFirst(newRequests, _function_1);

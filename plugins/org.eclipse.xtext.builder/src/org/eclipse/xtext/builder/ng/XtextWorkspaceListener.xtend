@@ -29,13 +29,14 @@ import static org.eclipse.core.resources.IResourceDelta.*
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 @Singleton
 class XtextWorkspaceListener implements IResourceChangeListener {
 
 	@Inject IStorage2UriMapper storage2UriMapper
 
-	@Inject CompilerJob compilerJob
+	@Inject XtextCompilerJob compilerJob
 
 	@Inject IResourceSetProvider resourceSetProvider
 

@@ -19,8 +19,9 @@ import org.eclipse.core.resources.IWorkspace
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
-class CompilerJob extends Job {
+class XtextCompilerJob extends Job {
 	
 	@Inject XtextCompiler compiler
 	

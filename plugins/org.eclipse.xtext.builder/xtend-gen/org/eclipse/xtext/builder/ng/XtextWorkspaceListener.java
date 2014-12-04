@@ -29,7 +29,7 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
-import org.eclipse.xtext.builder.ng.CompilerJob;
+import org.eclipse.xtext.builder.ng.XtextCompilerJob;
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString;
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.ui.resource.IResourceSetProvider;
@@ -44,6 +44,7 @@ import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 @Singleton
 @SuppressWarnings("all")
@@ -52,7 +53,7 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
   private IStorage2UriMapper storage2UriMapper;
   
   @Inject
-  private CompilerJob compilerJob;
+  private XtextCompilerJob compilerJob;
   
   @Inject
   private IResourceSetProvider resourceSetProvider;

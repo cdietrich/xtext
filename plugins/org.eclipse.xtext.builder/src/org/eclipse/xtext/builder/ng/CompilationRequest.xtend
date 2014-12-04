@@ -19,6 +19,7 @@ import java.util.List
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 @Accessors
 class CompilationRequest {
@@ -29,7 +30,6 @@ class CompilationRequest {
 	IProject project
 
 	val List<IResourceDescription.Delta> upstreamFileChanges = newArrayList
-//	val List<IResourceDescription.Delta> upstreamStructuralFileChanges = newArrayList
 
 	boolean computeAffected
 
@@ -39,22 +39,11 @@ class CompilationRequest {
 	
 	boolean forceBuild
 	
-//	def void addUpstreamChange(IResourceDescription.Delta change) {
-//		if (change.haveEObjectDescriptionsChanged)
-//			upstreamStructuralFileChanges += change
-//		upstreamFileChanges += change
-//	}
-
-//	def void addUpstreamChanges(Iterable<IResourceDescription.Delta> changes) {
-//		changes.forEach[addUpstreamChange]
-//	}
-
 	override toString() '''
 		CompilationRequest: «project.name»:
 		  delete: «FOR uri : toBeDeleted SEPARATOR ','»«uri?.lastSegment»«ENDFOR»
 		  update: «FOR uri : toBeUpdated SEPARATOR ','»«uri?.lastSegment»«ENDFOR»
 		  «upstreamFileChanges.size» upstreamFileChanges 
-«««		  «upstreamStructuralFileChanges.size» upstreamStructuralFileChanges 
 	'''
 
 	def boolean shouldCompile() {

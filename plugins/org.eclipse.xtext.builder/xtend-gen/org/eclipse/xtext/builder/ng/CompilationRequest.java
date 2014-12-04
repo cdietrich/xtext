@@ -22,6 +22,7 @@ import org.eclipse.xtext.xbase.lib.Pure;
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 @Accessors
 @SuppressWarnings("all")

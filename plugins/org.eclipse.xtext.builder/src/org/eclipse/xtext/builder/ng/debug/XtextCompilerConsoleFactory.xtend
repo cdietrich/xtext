@@ -6,6 +6,7 @@ import org.eclipse.ui.console.IConsoleManager
 
 /** 
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 class XtextCompilerConsoleFactory implements IConsoleFactory {
 	

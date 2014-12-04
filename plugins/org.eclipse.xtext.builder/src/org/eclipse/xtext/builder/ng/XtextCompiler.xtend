@@ -27,6 +27,7 @@ import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
+ * @author Moritz Eysholdt
  */
 class XtextCompiler {
 
