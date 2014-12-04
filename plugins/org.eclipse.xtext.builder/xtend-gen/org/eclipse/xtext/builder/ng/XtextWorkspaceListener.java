@@ -12,6 +12,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Singleton;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
@@ -26,6 +27,9 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.jdt.core.ElementChangedEvent;
+import org.eclipse.jdt.core.IElementChangedListener;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
 import org.eclipse.xtext.builder.ng.CompilerJob;
@@ -33,6 +37,7 @@ import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString;
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.ui.resource.IResourceSetProvider;
 import org.eclipse.xtext.ui.resource.IStorage2UriMapper;
+import org.eclipse.xtext.ui.resource.UriValidator;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Exceptions;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
@@ -45,7 +50,7 @@ import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
  */
 @Singleton
 @SuppressWarnings("all")
-public class XtextWorkspaceListener implements IResourceChangeListener {
+public class XtextWorkspaceListener implements IResourceChangeListener, IElementChangedListener {
   @Inject
   private IStorage2UriMapper storage2UriMapper;
   
@@ -55,15 +60,20 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
   @Inject
   private IResourceSetProvider resourceSetProvider;
   
+  @Inject
+  private UriValidator uriValidator;
+  
   private IWorkspace workspace;
   
   @Inject
   public void register(final IWorkspace workspace) {
     this.workspace = workspace;
     workspace.addResourceChangeListener(this);
+    JavaCore.addElementChangedListener(this, ElementChangedEvent.POST_CHANGE);
   }
   
   public void deregister() {
+    JavaCore.removeElementChangedListener(this);
     this.workspace.removeResourceChangeListener(this);
   }
   
@@ -117,13 +127,27 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
                 boolean _equals = (_kind == IResourceDelta.REMOVED);
                 if (_equals) {
                   _matched=true;
-                  final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
-                  boolean _notEquals_1 = (!Objects.equal(uri, null));
-                  if (_notEquals_1) {
+                  boolean _isBinaryJavaResource = XtextWorkspaceListener.this.isBinaryJavaResource(resource);
+                  if (_isBinaryJavaResource) {
                     IProject _project = resource.getProject();
                     CompilationRequest _get = project2request.get(_project);
-                    Set<URI> _toBeDeleted = _get.getToBeDeleted();
-                    _toBeDeleted.add(uri);
+                    _get.setForceBuild(true);
+                  } else {
+                    final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
+                    boolean _and = false;
+                    boolean _notEquals_1 = (!Objects.equal(uri, null));
+                    if (!_notEquals_1) {
+                      _and = false;
+                    } else {
+                      boolean _canBuild = XtextWorkspaceListener.this.uriValidator.canBuild(uri, ((IStorage)resource));
+                      _and = _canBuild;
+                    }
+                    if (_and) {
+                      IProject _project_1 = resource.getProject();
+                      CompilationRequest _get_1 = project2request.get(_project_1);
+                      Set<URI> _toBeDeleted = _get_1.getToBeDeleted();
+                      _toBeDeleted.add(uri);
+                    }
                   }
                 }
               }
@@ -142,13 +166,27 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
                 }
                 if (_or) {
                   _matched=true;
-                  final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
-                  boolean _notEquals_1 = (!Objects.equal(uri, null));
-                  if (_notEquals_1) {
+                  boolean _isBinaryJavaResource = XtextWorkspaceListener.this.isBinaryJavaResource(resource);
+                  if (_isBinaryJavaResource) {
                     IProject _project = resource.getProject();
                     CompilationRequest _get = project2request.get(_project);
-                    Set<URI> _toBeUpdated = _get.getToBeUpdated();
-                    _toBeUpdated.add(uri);
+                    _get.setForceBuild(true);
+                  } else {
+                    final URI uri = XtextWorkspaceListener.this.storage2UriMapper.getUri(((IStorage)resource));
+                    boolean _and = false;
+                    boolean _notEquals_1 = (!Objects.equal(uri, null));
+                    if (!_notEquals_1) {
+                      _and = false;
+                    } else {
+                      boolean _canBuild = XtextWorkspaceListener.this.uriValidator.canBuild(uri, ((IStorage)resource));
+                      _and = _canBuild;
+                    }
+                    if (_and) {
+                      IProject _project_1 = resource.getProject();
+                      CompilationRequest _get_1 = project2request.get(_project_1);
+                      Set<URI> _toBeUpdated = _get_1.getToBeUpdated();
+                      _toBeUpdated.add(uri);
+                    }
                   }
                 }
               }
@@ -168,5 +206,14 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
         throw Exceptions.sneakyThrow(_t);
       }
     }
+  }
+  
+  public boolean isBinaryJavaResource(final IResource resource) {
+    String _fileExtension = resource.getFileExtension();
+    return Collections.<String>unmodifiableSet(CollectionLiterals.<String>newHashSet("class", "jar")).contains(_fileExtension);
+  }
+  
+  public void elementChanged(final ElementChangedEvent event) {
+    XtextCompilerConsole.log(event);
   }
 }

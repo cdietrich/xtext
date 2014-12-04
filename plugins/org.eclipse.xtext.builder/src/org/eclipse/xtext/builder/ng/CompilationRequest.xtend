@@ -37,6 +37,8 @@ class CompilationRequest {
 
 	IProgressMonitor monitor
 	
+	boolean forceBuild
+	
 //	def void addUpstreamChange(IResourceDescription.Delta change) {
 //		if (change.haveEObjectDescriptionsChanged)
 //			upstreamStructuralFileChanges += change
@@ -56,6 +58,6 @@ class CompilationRequest {
 	'''
 
 	def boolean shouldCompile() {
-		computeAffected || !toBeDeleted.empty || !toBeUpdated.empty || !upstreamFileChanges.empty
+		forceBuild || computeAffected || !toBeDeleted.empty || !toBeUpdated.empty || !upstreamFileChanges.empty
 	}
 }

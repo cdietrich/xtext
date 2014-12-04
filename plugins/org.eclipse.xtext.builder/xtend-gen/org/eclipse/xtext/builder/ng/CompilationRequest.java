@@ -40,6 +40,8 @@ public class CompilationRequest {
   
   private IProgressMonitor monitor;
   
+  private boolean forceBuild;
+  
   public String toString() {
     StringConcatenation _builder = new StringConcatenation();
     _builder.append("CompilationRequest: ");
@@ -95,7 +97,7 @@ public class CompilationRequest {
     boolean _or = false;
     boolean _or_1 = false;
     boolean _or_2 = false;
-    if (this.computeAffected) {
+    if ((this.forceBuild || this.computeAffected)) {
       _or_2 = true;
     } else {
       boolean _isEmpty = this.toBeDeleted.isEmpty();
@@ -168,5 +170,14 @@ public class CompilationRequest {
   
   public void setMonitor(final IProgressMonitor monitor) {
     this.monitor = monitor;
+  }
+  
+  @Pure
+  public boolean isForceBuild() {
+    return this.forceBuild;
+  }
+  
+  public void setForceBuild(final boolean forceBuild) {
+    this.forceBuild = forceBuild;
   }
 }
