@@ -51,6 +51,9 @@ class XtextCompiler {
 		val buildData = new BuildData(request.project.name, resourceSet, toBeBuilt, queuedBuildData, indexingOnly)
 		val progress = new NullProgressMonitor
 		val deltas = builderState.update(buildData, progress)
+		XtextCompilerConsole.log('''
+			Compiled «deltas.map[uri.lastSegment].join(', ')»
+		''')
 		if (participant != null && !indexingOnly) {
 			workspace.run(
 				[

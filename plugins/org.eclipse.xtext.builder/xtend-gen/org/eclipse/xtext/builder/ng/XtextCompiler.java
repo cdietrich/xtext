@@ -12,6 +12,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
@@ -23,6 +24,7 @@ import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtend.lib.annotations.Data;
+import org.eclipse.xtend2.lib.StringConcatenation;
 import org.eclipse.xtext.builder.IXtextBuilderParticipant;
 import org.eclipse.xtext.builder.builderState.IBuilderState;
 import org.eclipse.xtext.builder.impl.BuildData;
@@ -34,6 +36,9 @@ import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.resource.IResourceDescription;
 import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider;
 import org.eclipse.xtext.xbase.lib.Exceptions;
+import org.eclipse.xtext.xbase.lib.Functions.Function1;
+import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.eclipse.xtext.xbase.lib.ListExtensions;
 import org.eclipse.xtext.xbase.lib.Pure;
 import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
 
@@ -176,6 +181,19 @@ public class XtextCompiler {
         final BuildData buildData = new BuildData(_name, resourceSet, toBeBuilt, this.queuedBuildData, indexingOnly);
         final NullProgressMonitor progress = new NullProgressMonitor();
         final ImmutableList<IResourceDescription.Delta> deltas = this.builderState.update(buildData, progress);
+        StringConcatenation _builder = new StringConcatenation();
+        _builder.append("Compiled ");
+        final Function1<IResourceDescription.Delta, String> _function = new Function1<IResourceDescription.Delta, String>() {
+          public String apply(final IResourceDescription.Delta it) {
+            URI _uri = it.getUri();
+            return _uri.lastSegment();
+          }
+        };
+        List<String> _map = ListExtensions.<IResourceDescription.Delta, String>map(deltas, _function);
+        String _join = IterableExtensions.join(_map, ", ");
+        _builder.append(_join, "");
+        _builder.newLineIfNotEmpty();
+        XtextCompilerConsole.log(_builder);
         boolean _and = false;
         boolean _notEquals = (!Objects.equal(this.participant, null));
         if (!_notEquals) {
@@ -184,14 +202,14 @@ public class XtextCompiler {
           _and = (!indexingOnly);
         }
         if (_and) {
-          final IWorkspaceRunnable _function = new IWorkspaceRunnable() {
+          final IWorkspaceRunnable _function_1 = new IWorkspaceRunnable() {
             public void run(final IProgressMonitor it) throws CoreException {
               IProject _project = request.getProject();
               XtextCompiler.BuildContext _buildContext = new XtextCompiler.BuildContext(_project, resourceSet, deltas, buildType);
               XtextCompiler.this.participant.build(_buildContext, progress);
             }
           };
-          this.workspace.run(_function, progress);
+          this.workspace.run(_function_1, progress);
         } else {
           progress.worked(1);
         }

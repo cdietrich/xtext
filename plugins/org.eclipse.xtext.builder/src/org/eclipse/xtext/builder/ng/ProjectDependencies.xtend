@@ -14,7 +14,6 @@ import java.util.Set
 import org.eclipse.core.resources.IProject
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
-import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -35,11 +34,11 @@ class ProjectDependencies {
 				currentNode.upstream += dependencyNode
 			}
 		}
-		XtextCompilerConsole.log(nodeMap.values.map['''
-			«toString»
-			«project.allUpstream.map[name].join(', ')»
-			«project.allDownstream.map[name].join(', ')»
-		'''].join('\n'))
+//		XtextCompilerConsole.log(nodeMap.values.map['''
+//			«toString»
+//			«project.allUpstream.map[name].join(', ')»
+//			«project.allDownstream.map[name].join(', ')»
+//		'''].join('\n'))
 	}
 
 	def getUpstream(IProject project) {

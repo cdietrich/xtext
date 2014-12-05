@@ -16,6 +16,8 @@ import org.eclipse.emf.ecore.resource.ResourceSet
 import org.eclipse.xtend.lib.annotations.Accessors
 import org.eclipse.xtext.resource.IResourceDescription
 import java.util.List
+import com.google.inject.Inject
+import org.eclipse.xtext.ui.resource.IResourceSetProvider
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -23,6 +25,21 @@ import java.util.List
  */
 @Accessors
 class CompilationRequest {
+
+	static class Factory {
+		@Inject IResourceSetProvider resourceSetProvider
+		
+		def create(IProject project) {
+			new CompilationRequest => [ request |
+				request.project = project
+				request.resourceSetProvider = [
+					resourceSetProvider.get(project)
+				]
+			]
+		}
+	}
+	
+	protected new() {}
 
 	val Set<URI> toBeUpdated = newHashSet
 	val Set<URI> toBeDeleted = newHashSet
@@ -37,16 +54,22 @@ class CompilationRequest {
 
 	IProgressMonitor monitor
 	
-	boolean forceBuild
-	
 	override toString() '''
 		CompilationRequest: «project.name»:
-		  delete: «FOR uri : toBeDeleted SEPARATOR ','»«uri?.lastSegment»«ENDFOR»
-		  update: «FOR uri : toBeUpdated SEPARATOR ','»«uri?.lastSegment»«ENDFOR»
+		  computeAffected: «computeAffected»
+		  delete: «toBeDeleted.map[lastSegment].join(',')»
+		  update: «toBeUpdated.map[lastSegment].join(',')»
 		  «upstreamFileChanges.size» upstreamFileChanges 
 	'''
 
 	def boolean shouldCompile() {
-		forceBuild || computeAffected || !toBeDeleted.empty || !toBeUpdated.empty || !upstreamFileChanges.empty
+		computeAffected || !toBeDeleted.empty || !toBeUpdated.empty || !upstreamFileChanges.empty
+	}
+	
+	def merge(CompilationRequest other) {
+		toBeDeleted += other.toBeDeleted
+		toBeUpdated += other.toBeUpdated
+		computeAffected = computeAffected || other.computeAffected
+		upstreamFileChanges += other.upstreamFileChanges
 	}
 }

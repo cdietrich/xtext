@@ -7,6 +7,8 @@
  */
 package org.eclipse.xtext.builder.ng;
 
+import com.google.common.collect.Iterables;
+import com.google.inject.Inject;
 import com.google.inject.Provider;
 import java.util.List;
 import java.util.Set;
@@ -17,7 +19,12 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtend.lib.annotations.Accessors;
 import org.eclipse.xtend2.lib.StringConcatenation;
 import org.eclipse.xtext.resource.IResourceDescription;
+import org.eclipse.xtext.ui.resource.IResourceSetProvider;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
+import org.eclipse.xtext.xbase.lib.Functions.Function1;
+import org.eclipse.xtext.xbase.lib.IterableExtensions;
+import org.eclipse.xtext.xbase.lib.ObjectExtensions;
+import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 import org.eclipse.xtext.xbase.lib.Pure;
 
 /**
@@ -27,6 +34,30 @@ import org.eclipse.xtext.xbase.lib.Pure;
 @Accessors
 @SuppressWarnings("all")
 public class CompilationRequest {
+  public static class Factory {
+    @Inject
+    private IResourceSetProvider resourceSetProvider;
+    
+    public CompilationRequest create(final IProject project) {
+      CompilationRequest _compilationRequest = new CompilationRequest();
+      final Procedure1<CompilationRequest> _function = new Procedure1<CompilationRequest>() {
+        public void apply(final CompilationRequest request) {
+          request.project = project;
+          final Provider<ResourceSet> _function = new Provider<ResourceSet>() {
+            public ResourceSet get() {
+              return Factory.this.resourceSetProvider.get(project);
+            }
+          };
+          request.resourceSetProvider = _function;
+        }
+      };
+      return ObjectExtensions.<CompilationRequest>operator_doubleArrow(_compilationRequest, _function);
+    }
+  }
+  
+  protected CompilationRequest() {
+  }
+  
   private final Set<URI> toBeUpdated = CollectionLiterals.<URI>newHashSet();
   
   private final Set<URI> toBeDeleted = CollectionLiterals.<URI>newHashSet();
@@ -41,8 +72,6 @@ public class CompilationRequest {
   
   private IProgressMonitor monitor;
   
-  private boolean forceBuild;
-  
   public String toString() {
     StringConcatenation _builder = new StringConcatenation();
     _builder.append("CompilationRequest: ");
@@ -51,40 +80,30 @@ public class CompilationRequest {
     _builder.append(":");
     _builder.newLineIfNotEmpty();
     _builder.append("  ");
+    _builder.append("computeAffected: ");
+    _builder.append(this.computeAffected, "  ");
+    _builder.newLineIfNotEmpty();
+    _builder.append("  ");
     _builder.append("delete: ");
-    {
-      boolean _hasElements = false;
-      for(final URI uri : this.toBeDeleted) {
-        if (!_hasElements) {
-          _hasElements = true;
-        } else {
-          _builder.appendImmediate(",", "  ");
-        }
-        String _lastSegment = null;
-        if (uri!=null) {
-          _lastSegment=uri.lastSegment();
-        }
-        _builder.append(_lastSegment, "  ");
+    final Function1<URI, String> _function = new Function1<URI, String>() {
+      public String apply(final URI it) {
+        return it.lastSegment();
       }
-    }
+    };
+    Iterable<String> _map = IterableExtensions.<URI, String>map(this.toBeDeleted, _function);
+    String _join = IterableExtensions.join(_map, ",");
+    _builder.append(_join, "  ");
     _builder.newLineIfNotEmpty();
     _builder.append("  ");
     _builder.append("update: ");
-    {
-      boolean _hasElements_1 = false;
-      for(final URI uri_1 : this.toBeUpdated) {
-        if (!_hasElements_1) {
-          _hasElements_1 = true;
-        } else {
-          _builder.appendImmediate(",", "  ");
-        }
-        String _lastSegment_1 = null;
-        if (uri_1!=null) {
-          _lastSegment_1=uri_1.lastSegment();
-        }
-        _builder.append(_lastSegment_1, "  ");
+    final Function1<URI, String> _function_1 = new Function1<URI, String>() {
+      public String apply(final URI it) {
+        return it.lastSegment();
       }
-    }
+    };
+    Iterable<String> _map_1 = IterableExtensions.<URI, String>map(this.toBeUpdated, _function_1);
+    String _join_1 = IterableExtensions.join(_map_1, ",");
+    _builder.append(_join_1, "  ");
     _builder.newLineIfNotEmpty();
     _builder.append("  ");
     int _size = this.upstreamFileChanges.size();
@@ -98,7 +117,7 @@ public class CompilationRequest {
     boolean _or = false;
     boolean _or_1 = false;
     boolean _or_2 = false;
-    if ((this.forceBuild || this.computeAffected)) {
+    if (this.computeAffected) {
       _or_2 = true;
     } else {
       boolean _isEmpty = this.toBeDeleted.isEmpty();
@@ -120,6 +139,17 @@ public class CompilationRequest {
       _or = _not_2;
     }
     return _or;
+  }
+  
+  public boolean merge(final CompilationRequest other) {
+    boolean _xblockexpression = false;
+    {
+      Iterables.<URI>addAll(this.toBeDeleted, other.toBeDeleted);
+      Iterables.<URI>addAll(this.toBeUpdated, other.toBeUpdated);
+      this.computeAffected = (this.computeAffected || other.computeAffected);
+      _xblockexpression = Iterables.<IResourceDescription.Delta>addAll(this.upstreamFileChanges, other.upstreamFileChanges);
+    }
+    return _xblockexpression;
   }
   
   @Pure
@@ -171,14 +201,5 @@ public class CompilationRequest {
   
   public void setMonitor(final IProgressMonitor monitor) {
     this.monitor = monitor;
-  }
-  
-  @Pure
-  public boolean isForceBuild() {
-    return this.forceBuild;
-  }
-  
-  public void setForceBuild(final boolean forceBuild) {
-    this.forceBuild = forceBuild;
   }
 }

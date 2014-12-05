@@ -21,7 +21,6 @@ import org.eclipse.core.resources.IWorkspace
 import org.eclipse.emf.common.util.URI
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole
-import org.eclipse.xtext.ui.resource.IResourceSetProvider
 import org.eclipse.xtext.ui.resource.IStorage2UriMapper
 import org.eclipse.xtext.ui.resource.UriValidator
 
@@ -38,7 +37,7 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 
 	@Inject XtextCompilerJob compilerJob
 
-	@Inject IResourceSetProvider resourceSetProvider
+	@Inject CompilationRequest.Factory requestFactory
 
 	@Inject UriValidator uriValidator
 	
@@ -47,7 +46,7 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 	@Inject
 	def register(IWorkspace workspace) {
 		this.workspace = workspace
-		workspace.addResourceChangeListener(this)
+		workspace.addResourceChangeListener(this, IResourceChangeEvent.POST_CHANGE)
 	}
 
 	def deregister() {
@@ -59,16 +58,7 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 			return;
 		try {
 			XtextCompilerConsole.log(new ResourceChangeEventToString().apply(event))
-			val requests = <CompilationRequest>newArrayList
-			for (project : workspace.computeProjectOrder(workspace.root.projects).projects) {
-				requests.add(new CompilationRequest => [ request |
-					request.project = project
-					request.resourceSetProvider = [
-						resourceSetProvider.get(project)
-					]
-				])
-			}
-			val project2request = requests.toMap[project]
+			val project2request = newHashMap
 			event.delta.accept [ delta |
 				if(delta.flags != IResourceDelta.MARKERS) {
 					val resource = delta.resource
@@ -81,7 +71,7 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 					return true
 				}
 			]
-			compilerJob.compilationRequests = requests
+			compilerJob.enqueue(project2request.values)
 		} catch (Exception exc) {
 			XtextCompilerConsole.log(exc)
 		}
@@ -90,15 +80,26 @@ class XtextWorkspaceListener implements IResourceChangeListener {
 	protected def addToCompilationRequest(IResource resource, Map<IProject, CompilationRequest> project2request,
 			(CompilationRequest)=>Set<URI> uriList) {
 		if(isBinaryJavaResource(resource)) {
-			project2request.get(resource.project).forceBuild = true
+			project2request.createOrGet(resource.project).computeAffected = true
 		} else if(resource instanceof IStorage) {
 			val uri = storage2UriMapper.getUri(resource)
 			if(uri != null && uriValidator.canBuild(uri, resource))
-				uriList.apply(project2request.get(resource.project)) += uri
+				uriList.apply(project2request.createOrGet(resource.project)) += uri
 		}
 	}
 	
+	protected def createOrGet(Map<IProject, CompilationRequest> project2request, IProject project) {
+		return project2request.get(project) ?: {
+			val request = requestFactory.create(project)
+			project2request.put(project, request)
+			request
+		}
+	} 
+	
 	protected def isBinaryJavaResource(IResource resource) {
-		#{'class', 'jar'}.contains(resource.fileExtension)
+		switch resource.fileExtension {
+			case 'jar', case 'class':
+				return true
+		}
 	}
 }

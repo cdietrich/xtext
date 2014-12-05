@@ -9,10 +9,9 @@ package org.eclipse.xtext.builder.ng;
 
 import com.google.common.base.Objects;
 import com.google.inject.Inject;
-import com.google.inject.Provider;
 import com.google.inject.Singleton;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.core.resources.IProject;
@@ -23,24 +22,18 @@ import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceDeltaVisitor;
 import org.eclipse.core.resources.IStorage;
 import org.eclipse.core.resources.IWorkspace;
-import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.builder.ng.BuilderSwitch;
 import org.eclipse.xtext.builder.ng.CompilationRequest;
 import org.eclipse.xtext.builder.ng.XtextCompilerJob;
 import org.eclipse.xtext.builder.ng.debug.ResourceChangeEventToString;
 import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
-import org.eclipse.xtext.ui.resource.IResourceSetProvider;
 import org.eclipse.xtext.ui.resource.IStorage2UriMapper;
 import org.eclipse.xtext.ui.resource.UriValidator;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Exceptions;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
-import org.eclipse.xtext.xbase.lib.IterableExtensions;
-import org.eclipse.xtext.xbase.lib.ObjectExtensions;
-import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
 
 /**
  * @author Jan Koehnlein - Initial contribution and API
@@ -56,7 +49,7 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
   private XtextCompilerJob compilerJob;
   
   @Inject
-  private IResourceSetProvider resourceSetProvider;
+  private CompilationRequest.Factory requestFactory;
   
   @Inject
   private UriValidator uriValidator;
@@ -66,7 +59,7 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
   @Inject
   public void register(final IWorkspace workspace) {
     this.workspace = workspace;
-    workspace.addResourceChangeListener(this);
+    workspace.addResourceChangeListener(this, IResourceChangeEvent.POST_CHANGE);
   }
   
   public void deregister() {
@@ -83,34 +76,9 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
       ResourceChangeEventToString _resourceChangeEventToString = new ResourceChangeEventToString();
       String _apply = _resourceChangeEventToString.apply(event);
       XtextCompilerConsole.log(_apply);
-      final ArrayList<CompilationRequest> requests = CollectionLiterals.<CompilationRequest>newArrayList();
-      IWorkspaceRoot _root = this.workspace.getRoot();
-      IProject[] _projects = _root.getProjects();
-      IWorkspace.ProjectOrder _computeProjectOrder = this.workspace.computeProjectOrder(_projects);
-      for (final IProject project : _computeProjectOrder.projects) {
-        CompilationRequest _compilationRequest = new CompilationRequest();
-        final Procedure1<CompilationRequest> _function = new Procedure1<CompilationRequest>() {
-          public void apply(final CompilationRequest request) {
-            request.setProject(project);
-            final Provider<ResourceSet> _function = new Provider<ResourceSet>() {
-              public ResourceSet get() {
-                return XtextWorkspaceListener.this.resourceSetProvider.get(project);
-              }
-            };
-            request.setResourceSetProvider(_function);
-          }
-        };
-        CompilationRequest _doubleArrow = ObjectExtensions.<CompilationRequest>operator_doubleArrow(_compilationRequest, _function);
-        requests.add(_doubleArrow);
-      }
-      final Function1<CompilationRequest, IProject> _function_1 = new Function1<CompilationRequest, IProject>() {
-        public IProject apply(final CompilationRequest it) {
-          return it.getProject();
-        }
-      };
-      final Map<IProject, CompilationRequest> project2request = IterableExtensions.<IProject, CompilationRequest>toMap(requests, _function_1);
+      final HashMap<IProject, CompilationRequest> project2request = CollectionLiterals.<IProject, CompilationRequest>newHashMap();
       IResourceDelta _delta = event.getDelta();
-      final IResourceDeltaVisitor _function_2 = new IResourceDeltaVisitor() {
+      final IResourceDeltaVisitor _function = new IResourceDeltaVisitor() {
         public boolean visit(final IResourceDelta delta) throws CoreException {
           int _flags = delta.getFlags();
           boolean _notEquals = (_flags != IResourceDelta.MARKERS);
@@ -160,8 +128,9 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
           return false;
         }
       };
-      _delta.accept(_function_2);
-      this.compilerJob.setCompilationRequests(requests);
+      _delta.accept(_function);
+      Collection<CompilationRequest> _values = project2request.values();
+      this.compilerJob.enqueue(_values);
     } catch (final Throwable _t) {
       if (_t instanceof Exception) {
         final Exception exc = (Exception)_t;
@@ -177,8 +146,8 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
     boolean _isBinaryJavaResource = this.isBinaryJavaResource(resource);
     if (_isBinaryJavaResource) {
       IProject _project = resource.getProject();
-      CompilationRequest _get = project2request.get(_project);
-      _get.setForceBuild(true);
+      CompilationRequest _createOrGet = this.createOrGet(project2request, _project);
+      _createOrGet.setComputeAffected(true);
     } else {
       boolean _xifexpression_1 = false;
       if ((resource instanceof IStorage)) {
@@ -196,8 +165,8 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
           }
           if (_and) {
             IProject _project_1 = resource.getProject();
-            CompilationRequest _get_1 = project2request.get(_project_1);
-            Set<URI> _apply = uriList.apply(_get_1);
+            CompilationRequest _createOrGet_1 = this.createOrGet(project2request, _project_1);
+            Set<URI> _apply = uriList.apply(_createOrGet_1);
             _xifexpression_2 = _apply.add(uri);
           }
           _xblockexpression = _xifexpression_2;
@@ -209,8 +178,39 @@ public class XtextWorkspaceListener implements IResourceChangeListener {
     return Boolean.valueOf(_xifexpression);
   }
   
+  protected CompilationRequest createOrGet(final Map<IProject, CompilationRequest> project2request, final IProject project) {
+    CompilationRequest _elvis = null;
+    CompilationRequest _get = project2request.get(project);
+    if (_get != null) {
+      _elvis = _get;
+    } else {
+      CompilationRequest _xblockexpression = null;
+      {
+        final CompilationRequest request = this.requestFactory.create(project);
+        project2request.put(project, request);
+        _xblockexpression = request;
+      }
+      _elvis = _xblockexpression;
+    }
+    return _elvis;
+  }
+  
   protected boolean isBinaryJavaResource(final IResource resource) {
     String _fileExtension = resource.getFileExtension();
-    return Collections.<String>unmodifiableSet(CollectionLiterals.<String>newHashSet("class", "jar")).contains(_fileExtension);
+    boolean _matched = false;
+    if (!_matched) {
+      if (Objects.equal(_fileExtension, "jar")) {
+        _matched=true;
+      }
+      if (!_matched) {
+        if (Objects.equal(_fileExtension, "class")) {
+          _matched=true;
+        }
+      }
+      if (_matched) {
+        return true;
+      }
+    }
+    return false;
   }
 }

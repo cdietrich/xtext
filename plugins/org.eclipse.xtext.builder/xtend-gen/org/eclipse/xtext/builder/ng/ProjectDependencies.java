@@ -19,7 +19,6 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.xtend.lib.annotations.Accessors;
 import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor;
 import org.eclipse.xtend2.lib.StringConcatenation;
-import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Exceptions;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
@@ -112,39 +111,6 @@ public class ProjectDependencies {
           }
         }
       }
-      Collection<ProjectDependencies.ProjectNode> _values = this.nodeMap.values();
-      final Function1<ProjectDependencies.ProjectNode, String> _function = new Function1<ProjectDependencies.ProjectNode, String>() {
-        public String apply(final ProjectDependencies.ProjectNode it) {
-          StringConcatenation _builder = new StringConcatenation();
-          String _string = it.toString();
-          _builder.append(_string, "");
-          _builder.newLineIfNotEmpty();
-          Iterable<IProject> _allUpstream = ProjectDependencies.this.getAllUpstream(it.project);
-          final Function1<IProject, String> _function = new Function1<IProject, String>() {
-            public String apply(final IProject it) {
-              return it.getName();
-            }
-          };
-          Iterable<String> _map = IterableExtensions.<IProject, String>map(_allUpstream, _function);
-          String _join = IterableExtensions.join(_map, ", ");
-          _builder.append(_join, "");
-          _builder.newLineIfNotEmpty();
-          Iterable<IProject> _allDownstream = ProjectDependencies.this.getAllDownstream(it.project);
-          final Function1<IProject, String> _function_1 = new Function1<IProject, String>() {
-            public String apply(final IProject it) {
-              return it.getName();
-            }
-          };
-          Iterable<String> _map_1 = IterableExtensions.<IProject, String>map(_allDownstream, _function_1);
-          String _join_1 = IterableExtensions.join(_map_1, ", ");
-          _builder.append(_join_1, "");
-          _builder.newLineIfNotEmpty();
-          return _builder.toString();
-        }
-      };
-      Iterable<String> _map = IterableExtensions.<ProjectDependencies.ProjectNode, String>map(_values, _function);
-      String _join = IterableExtensions.join(_map, "\n");
-      XtextCompilerConsole.log(_join);
     } catch (Throwable _e) {
       throw Exceptions.sneakyThrow(_e);
     }
