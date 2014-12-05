@@ -12,6 +12,7 @@ import org.eclipse.core.commands.ExecutionEvent
 import org.eclipse.core.commands.ExecutionException
 import org.eclipse.swt.widgets.Event
 import org.eclipse.swt.widgets.MenuItem
+import org.eclipse.ui.console.ConsolePlugin
 import org.eclipse.xtext.builder.ng.BuilderSwitch
 
 /** 
@@ -21,8 +22,16 @@ import org.eclipse.xtext.builder.ng.BuilderSwitch
 class UseNewXtextCompilerHandler extends AbstractHandler {
 	
 	override Object execute(ExecutionEvent event) throws ExecutionException {
-		val isSelected = event.isSelected
-		BuilderSwitch.setUseNewCompiler(isSelected)
+		val selected = event.isSelected
+		BuilderSwitch.setUseNewCompiler(selected)
+		if(selected) {
+			// Our consoles hasn't been registered yet, so we have to make sure it's registered first
+			// Is this really meant to be used that way?
+			new XtextCompilerConsoleFactory().openConsole
+			val consoleManager = ConsolePlugin.^default.consoleManager
+			val xtextCompilerConsole = consoleManager.consoles.filter(XtextCompilerConsole).head
+			consoleManager.showConsoleView(xtextCompilerConsole)
+		}
 		null
 	}
 

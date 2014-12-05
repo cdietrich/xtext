@@ -11,7 +11,7 @@ import org.eclipse.ui.console.IConsoleManager
 class XtextCompilerConsoleFactory implements IConsoleFactory {
 	
 	override void openConsole() {
-		var IConsoleManager consoleManager = ConsolePlugin.getDefault.consoleManager
+		var IConsoleManager consoleManager = ConsolePlugin.^default.consoleManager
 		consoleManager.addConsoles(#[new XtextCompilerConsole()])
 	}
 }
