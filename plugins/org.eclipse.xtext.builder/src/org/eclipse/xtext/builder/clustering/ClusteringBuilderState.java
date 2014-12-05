@@ -18,7 +18,6 @@ import org.apache.log4j.Logger;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResourceStatus;
 import org.eclipse.core.resources.IWorkspace;
-import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -271,11 +270,7 @@ public class ClusteringBuilderState extends AbstractBuilderState {
                         if (!buildData.isIndexingOnly()) {
                         	final Delta finalNewDelta = newDelta;
 	                        try {
-	                        	workspace.run(new IWorkspaceRunnable() {
-									public void run(IProgressMonitor monitor) throws CoreException {
-										updateMarkers(finalNewDelta, resourceSet, subProgress);
-									}
-								}, monitor);
+								updateMarkers(finalNewDelta, resourceSet, subProgress);
 	                        } catch (OperationCanceledException e) {
 	                        	loadOperation.cancel();
 	                        	throw e;

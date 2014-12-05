@@ -12,6 +12,7 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IStorage;
+import org.eclipse.core.resources.IWorkspaceRunnable;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
@@ -58,42 +59,52 @@ public class MarkerUpdaterImpl implements IMarkerUpdater {
 		processDelta(delta, resourceSet, monitor);
 	}
 
-	private void processDelta(Delta delta, /* @Nullable */ ResourceSet resourceSet, IProgressMonitor monitor) throws OperationCanceledException {
-		URI uri = delta.getUri();
-		IResourceUIValidatorExtension validatorExtension = getResourceUIValidatorExtension(uri);
-		IMarkerContributor markerContributor = getMarkerContributor(uri);
-		CheckMode normalAndFastMode = CheckMode.NORMAL_AND_FAST;
+	private void processDelta(final Delta delta, /* @Nullable */ final ResourceSet resourceSet, IProgressMonitor monitor) throws OperationCanceledException {
+		final URI uri = delta.getUri();
+		final IResourceUIValidatorExtension validatorExtension = getResourceUIValidatorExtension(uri);
+		final IMarkerContributor markerContributor = getMarkerContributor(uri);
+		final CheckMode normalAndFastMode = CheckMode.NORMAL_AND_FAST;
 
 		for (Pair<IStorage, IProject> pair : mapper.getStorages(uri)) {
 			if (monitor.isCanceled()) {
 				throw new OperationCanceledException();
 			}
 			if (pair.getFirst() instanceof IFile) {
-				IFile file = (IFile) pair.getFirst();
-				if (delta.getNew() != null) {
-					if (resourceSet == null)
-						throw new IllegalArgumentException("resourceSet may not be null for changed resources.");
-					
-					Resource resource = resourceSet.getResource(uri, true);
-					if (validatorExtension != null) {
-						validatorExtension.updateValidationMarkers(file, resource, normalAndFastMode, monitor);
-					}
-					if (markerContributor != null) {
-						markerContributor.updateMarkers(file, resource, monitor);
-					}
-				} else {
-					if (validatorExtension != null) {
-						validatorExtension.deleteValidationMarkers(file, normalAndFastMode, monitor);
-					} else {
-						deleteAllValidationMarker(file, normalAndFastMode, monitor);
-					}	
-					if (markerContributor != null) {
-						markerContributor.deleteMarkers(file, monitor);
-					} else {
-						deleteAllContributedMarkers(file, monitor);
-					}
+				final IFile file = (IFile) pair.getFirst();
+				try {
+					// TODO: this is very fine-granular locking.
+					// consider using a common operation with a MultiRule
+					file.getWorkspace().run(new IWorkspaceRunnable() {
+						public void run(IProgressMonitor monitor) throws CoreException {
+							if (delta.getNew() != null) {
+								if (resourceSet == null)
+									throw new IllegalArgumentException("resourceSet may not be null for changed resources.");
+								
+								Resource resource = resourceSet.getResource(uri, true);
+								if (validatorExtension != null) {
+									validatorExtension.updateValidationMarkers(file, resource, normalAndFastMode, monitor);
+								}
+								if (markerContributor != null) {
+									markerContributor.updateMarkers(file, resource, monitor);
+								}
+							} else {
+								if (validatorExtension != null) {
+									validatorExtension.deleteValidationMarkers(file, normalAndFastMode, monitor);
+								} else {
+									deleteAllValidationMarker(file, normalAndFastMode, monitor);
+								}	
+								if (markerContributor != null) {
+									markerContributor.deleteMarkers(file, monitor);
+								} else {
+									deleteAllContributedMarkers(file, monitor);
+								}
+							}
+						}
+					}, file, 0, monitor);
+				} catch(CoreException exc) {
+					LOG.error(exc.getMessage(), exc);
 				}
-			}
+			} 
 		}
 	}
 
