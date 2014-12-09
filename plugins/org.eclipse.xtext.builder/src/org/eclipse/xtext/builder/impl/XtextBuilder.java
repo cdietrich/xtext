@@ -23,6 +23,7 @@ import org.eclipse.core.runtime.SubMonitor;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.xtext.builder.IXtextBuilderParticipant.BuildType;
 import org.eclipse.xtext.builder.builderState.IBuilderState;
+import org.eclipse.xtext.builder.ng.debug.XtextCompilerConsole;
 import org.eclipse.xtext.resource.IResourceDescription.Delta;
 import org.eclipse.xtext.resource.impl.ResourceDescriptionsProvider;
 import org.eclipse.xtext.service.OperationCanceledError;
@@ -87,6 +88,8 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 					
 					@Override
 					public boolean isCanceled() {
+						if(isInterrupted()) 
+							XtextCompilerConsole.log("interupted");
 						return isInterrupted() || super.isCanceled();
 					}
 				};
@@ -186,6 +189,7 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 	 *        reported and that the operation cannot be cancelled.
 	 */
 	protected void doBuild(ToBeBuilt toBeBuilt, IProgressMonitor monitor, BuildType type) throws CoreException {
+		XtextCompilerConsole.log("Building " + getProject().getName());
 		// return early if there's nothing to do.
 		// we reuse the isEmpty() impl from BuildData assuming that it doesnT access the ResourceSet which is still null 
 		// and would be expensive to create.
