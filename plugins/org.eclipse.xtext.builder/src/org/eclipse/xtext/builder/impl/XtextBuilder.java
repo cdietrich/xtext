@@ -69,6 +69,8 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 	@SuppressWarnings("rawtypes")
 	@Override
 	protected IProject[] build(int kind, Map args, IProgressMonitor monitor) throws CoreException {
+		if(isInterrupted())
+			throw new OperationCanceledException();
 		if (IBuildFlag.FORGET_BUILD_STATE_ONLY.isSet(args)) {
 			forgetLastBuiltState();
 			return getProject().getReferencedProjects();

@@ -313,12 +313,14 @@ public class QueuedBuildData {
 		deltasCopy = new ArrayList<Delta>(deltas);
 		urisCopy = new LinkedList<URI>(uris);
 		projectNameToChangedResourceCopy = new HashMap<String, LinkedList<URI>>(projectNameToChangedResource);
+		contribution.createCheckpoint();
 	}
 
 	public void discardCheckpoint() {
 		deltasCopy = null;
 		urisCopy = null;
 		projectNameToChangedResourceCopy = null;
+		contribution.discardCheckpoint();
 	}
 
 	public void rollback() {
@@ -329,5 +331,6 @@ public class QueuedBuildData {
 		uris.addAll(urisCopy);
 		projectNameToChangedResource.clear();
 		projectNameToChangedResource.putAll(projectNameToChangedResourceCopy);
+		contribution.rollback();
 	}
 }
