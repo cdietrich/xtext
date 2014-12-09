@@ -15,6 +15,7 @@ import org.eclipse.ui.console.IConsole;
 import org.eclipse.ui.console.IConsoleManager;
 import org.eclipse.ui.console.IOConsole;
 import org.eclipse.ui.console.IOConsoleOutputStream;
+import org.eclipse.xtext.builder.ng.debug.JobConsoleLogger;
 import org.eclipse.xtext.xbase.lib.Conversions;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
 
@@ -28,6 +29,7 @@ public class XtextCompilerConsole extends IOConsole {
   
   public XtextCompilerConsole() {
     super("Xtext Compiler", "xtextCompilerConsole", null, true);
+    new JobConsoleLogger();
     IOConsoleOutputStream _newOutputStream = this.newOutputStream();
     PrintStream _printStream = new PrintStream(_newOutputStream, true);
     this.out = _printStream;

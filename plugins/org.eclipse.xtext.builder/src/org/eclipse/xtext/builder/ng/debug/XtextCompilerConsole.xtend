@@ -23,6 +23,7 @@ class XtextCompilerConsole extends IOConsole {
 
 	new() {
 		super("Xtext Compiler", "xtextCompilerConsole", null, true)
+		new JobConsoleLogger
 		this.out = new PrintStream(newOutputStream(), true)
 	}
 
@@ -33,8 +34,8 @@ class XtextCompilerConsole extends IOConsole {
 	static def log(Object it) {
 		val consoleManager = ConsolePlugin.getDefault.consoleManager
 		val console = consoleManager.consoles.filter(XtextCompilerConsole).head
-		console?.println('[' + Thread.currentThread.name + '] ' +
-			switch it {
+		console?.println(
+			'[' + Thread.currentThread.name + '] ' + switch it {
 				Throwable:
 					stackTraceAsString
 				default:
