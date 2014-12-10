@@ -7,9 +7,11 @@
  *******************************************************************************/
 package org.eclipse.xtext.builder.impl;
 
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.eclipse.core.internal.resources.Workspace;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResourceDelta;
 import org.eclipse.core.resources.IResourceDeltaVisitor;
@@ -111,13 +113,9 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 			log.error(e.getMessage(), e);
 			throw e;
 		} catch (OperationCanceledException e) {
-			rememberLastBuiltState();
-			queuedBuildData.rollback();
-			// do not re-throw the exception to avoid deletion of the build state
+			handleInterruption();
 		} catch (OperationCanceledError err) {
-			rememberLastBuiltState();
-			queuedBuildData.rollback();
-			// do not re-throw the exception to avoid deletion of the build state
+			handleInterruption();
 		} catch (Exception e) {
 			log.error(e.getMessage(), e);
 			forgetLastBuiltState();
@@ -131,6 +129,26 @@ public class XtextBuilder extends IncrementalProjectBuilder {
 		return getProject().getReferencedProjects();
 	}
 
+	private void handleInterruption() {
+		// Don't pass an OperationCanceledException on to the BuildManager as it would
+		// force a full build in the next round. Instead, save the resource deltas to 
+		// be reprocessed next time.
+		// @see https://bugs.eclipse.org/bugs/show_bug.cgi?id=454716
+		queuedBuildData.rollback();
+		doRememberLastBuiltState();
+		((Workspace) getProject().getWorkspace()).getBuildManager().interrupt();
+	}
+	
+	private void doRememberLastBuiltState() {
+		try {
+			Method method = getClass().getMethod("rememberLastBuiltState");
+			method.invoke(this);
+		} catch (Exception e) {
+			// not available prior to Eclipse 3.7. Sorry: full build next time
+			throw new OperationCanceledException();
+		}
+	}
+	
 	private String getKindAsString(int kind) {
 		if (kind == FULL_BUILD) {
 			return "FULL";
