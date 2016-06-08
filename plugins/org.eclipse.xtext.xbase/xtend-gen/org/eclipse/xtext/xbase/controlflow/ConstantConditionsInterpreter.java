@@ -580,8 +580,31 @@ public class ConstantConditionsInterpreter {
   }
   
   protected EvaluationResult _internalEvaluate(final XCastedExpression expression, final EvaluationContext context) {
+    IResolvedTypes _resolvedTypes = context.getResolvedTypes();
     XExpression _target = expression.getTarget();
-    return this.doEvaluate(_target, context);
+    final LightweightTypeReference declaredType = _resolvedTypes.getActualType(_target);
+    boolean _isPrimitive = false;
+    if (declaredType!=null) {
+      _isPrimitive=declaredType.isPrimitive();
+    }
+    if (_isPrimitive) {
+      IResolvedTypes _resolvedTypes_1 = context.getResolvedTypes();
+      final LightweightTypeReference castedType = _resolvedTypes_1.getActualType(expression);
+      String _identifier = null;
+      if (castedType!=null) {
+        _identifier=castedType.getIdentifier();
+      }
+      String _identifier_1 = null;
+      if (declaredType!=null) {
+        _identifier_1=declaredType.getIdentifier();
+      }
+      boolean _notEquals = (!Objects.equal(_identifier, _identifier_1));
+      if (_notEquals) {
+        return EvaluationResult.NOT_A_CONSTANT;
+      }
+    }
+    XExpression _target_1 = expression.getTarget();
+    return this.doEvaluate(_target_1, context);
   }
   
   protected EvaluationResult _internalEvaluate(final XStringLiteral it, final EvaluationContext context) {
